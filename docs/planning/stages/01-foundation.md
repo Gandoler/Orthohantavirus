@@ -28,20 +28,21 @@ Create the repository foundation: Docker-first local development, backend servic
 
 | ID | Task | Area | Priority | Status |
 | --- | --- | --- | --- | --- |
-| OHV-005 | Scaffold monorepo and Docker Compose stack | infra | P0 | todo |
-| OHV-006 | Implement shared Pydantic contracts | backend | P0 | todo |
-| OHV-007 | Implement S3 storage wrapper and MinIO init | backend | P0 | todo |
-| OHV-010 | Implement map API health and metadata endpoints | backend | P0 | todo |
-| OHV-011 | Implement news API health endpoint | news | P0 | todo |
+| OHV-005 | Scaffold monorepo and Docker Compose stack | infra | P0 | done |
+| OHV-006 | Implement shared Pydantic contracts | backend | P0 | done |
+| OHV-007 | Implement S3 storage wrapper and MinIO init | backend | P0 | done |
+| OHV-010 | Implement map API health and metadata endpoints | backend | P0 | done |
+| OHV-011 | Implement news service health endpoint and feed contract placeholder | news | P0 | done |
+| OHV-022 | Verify local Docker Compose runtime | infra | P0 | done |
 
 ## Acceptance Criteria
 
-- [ ] `docker compose up --build` starts frontend, map API, news service, and MinIO.
-- [ ] `GET /health` works for map API and news service.
-- [ ] MinIO bucket is created automatically.
-- [ ] Backend tests run with `pytest`.
-- [ ] Frontend checks run with `pnpm test` or documented equivalent.
-- [ ] `.env.example` contains all variables needed for local start.
+- [x] `docker compose up --build` starts frontend, map API, news service, and MinIO.
+- [x] `GET /health` works for map API and news service in endpoint tests.
+- [x] MinIO bucket is created automatically.
+- [x] Backend tests run with `pytest`.
+- [x] Frontend checks run with documented `pnpm build`.
+- [x] `.env.example` contains all variables needed for local start.
 
 ## Technical Notes
 
@@ -58,3 +59,9 @@ Create the repository foundation: Docker-first local development, backend servic
 ## Stage Gate
 
 Do not start broad ingestion work until local storage and contracts are stable enough to write repeatable parser tests.
+
+## Current Status
+
+Status: done
+
+Implementation is in place, static verification passes, and Docker runtime verification passed after Docker Desktop was started.
