@@ -1,0 +1,98 @@
+name: CI
+
+on:
+  push:
+    branches: ["main"]
+  pull_request:
+
+jobs:
+  backend:
+    name: Backend
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install backend
+        run: python -m pip install -e 'backend[dev]'
+
+      - name: Lint backend
+        run: python -m ruff check backend
+
+      - name: Test backend
+        run: python -m pytest backend/tests
+
+  frontend:
+    name: Frontend
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.33.4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: pnpm
+          cache-dependency-path: frontend/pnpm-lock.yaml
+
+      - name: Install frontend
+        run: pnpm install --frozen-lockfile
+
+      - name: Test frontend
+        run: pnpm test
+
+      - name: Install Playwright browser
+        run: pnpm exec playwright install --with-deps chromium
+
+      - name: Run browser smoke tests
+        run: pnpm test:e2e
+
+      - name: Build frontend
+        run: pnpm build
+
+  infra:
+    name: Infra
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Validate shell scripts
+        run: sh -n infra/scripts/deploy.sh infra/scripts/backup-minio.sh infra/scripts/restore-minio.sh infra/minio/init-buckets.sh
+
+      - name: Validate local Compose config
+        run: docker compose config >/dev/null
+
+      - name: Validate production Compose config
+        run: docker compose --env-file .env.prod.example -f docker-compose.prod.yml config >/dev/null
+
+      - name: Validate production Caddy config
+        run: |
+          docker run --rm \
+            -e PUBLIC_DOMAIN=hanta.example.com \
+            -e ADMIN_DOMAIN=admin.hanta.example.com \
+            -e ADMIN_BASIC_AUTH_USER=admin \
+            -e 'ADMIN_BASIC_AUTH_HASH=$2a$14$8lZyEXLF/KIxqsOVAFRQC.9cdrjRFoRLqv63vVGcIJsQneONQUYK6' \
+            -v "$PWD/infra/caddy/Caddyfile:/etc/caddy/Caddyfile:ro" \
+            caddy:2-alpine caddy validate --config /etc/caddy/Caddyfile
+
+      - name: Validate frontend Caddy config
+        run: |
+          docker run --rm \
+            -v "$PWD/frontend/Caddyfile:/etc/caddy/Caddyfile:ro" \
+            caddy:2-alpine caddy validate --config /etc/caddy/Caddyfile
