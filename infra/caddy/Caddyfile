@@ -1,0 +1,41 @@
+{
+	email admin@{$PUBLIC_DOMAIN}
+}
+
+{$PUBLIC_DOMAIN} {
+	encode zstd gzip
+
+	handle_path /api/map/* {
+		reverse_proxy map-api:8000
+	}
+
+	handle_path /api/news/* {
+		reverse_proxy news-service:8001
+	}
+
+	handle /analytics/script.js {
+		reverse_proxy umami:3000
+	}
+
+	handle /analytics/api/send {
+		reverse_proxy umami:3000
+	}
+
+	handle {
+		reverse_proxy frontend:80
+	}
+}
+
+{$ADMIN_DOMAIN} {
+	encode zstd gzip
+
+	handle_path /analytics/* {
+		reverse_proxy umami:3000
+	}
+
+	handle_path /grafana/* {
+		reverse_proxy grafana:3000
+	}
+
+	respond "admin service" 200
+}
