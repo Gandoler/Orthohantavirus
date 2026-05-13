@@ -40,6 +40,11 @@ Alloy is configured to ship logs only from running containers in the current `or
 
 ## Production VPS Deploy
 
+Detailed hardening and deployment flow:
+
+- `docs/security/security-review.md`
+- `docs/operations/production-deployment-playbook.md`
+
 Server prerequisites:
 
 ```bash
@@ -68,6 +73,12 @@ Regular deploy:
 
 ```bash
 ./infra/scripts/deploy.sh
+```
+
+For risky updates, create a MinIO backup before rebuild/restart:
+
+```bash
+BACKUP_BEFORE_DEPLOY=1 ./infra/scripts/deploy.sh
 ```
 
 Production routes:
