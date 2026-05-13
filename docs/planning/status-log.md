@@ -16,6 +16,7 @@ Completed:
 - fixed the production frontend image so Caddy runs as an explicit non-root app user;
 - fixed MinIO initialization so non-root app S3 credentials get a bucket-scoped policy;
 - fixed MinIO backup/restore scripts to work with the actual Compose project volume name on the VPS;
+- fixed API health and metadata freshness responses to expose `manifests/latest.json.generated_at`;
 - ran production ingestion for CDC, ECDC, and WHO sources;
 - verified MinIO public map/news artifacts were written;
 - installed cron entries for periodic ingestion and local MinIO backups.
@@ -25,6 +26,7 @@ Verification:
 - VPS stack `docker compose ps`: all production services up;
 - map API internal health: passed;
 - news service internal health: passed;
+- API health and metadata freshness: passed after rebuild;
 - summary endpoint after ingestion: 69 reported case records, 2775 reported cases, 309 deaths, 11 outbreak events, 11 news items;
 - MinIO artifact check: `regions.geojson`, `outbreaks.geojson`, `feed.json`, and `manifests/latest.json` present;
 - production MinIO backup command: passed;

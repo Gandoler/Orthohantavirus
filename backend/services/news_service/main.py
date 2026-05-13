@@ -4,7 +4,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from shared.config import get_settings
 from shared.contracts import HealthResponse, NewsItem
 from shared.observability import configure_json_logging, install_access_log_middleware
-from shared.public_artifacts import read_json_artifact
+from shared.public_artifacts import latest_manifest_generated_at, read_json_artifact
 from shared.storage import S3Storage
 
 settings = get_settings()
@@ -28,7 +28,7 @@ def health() -> HealthResponse:
         service=settings.service_name,
         app_env=settings.app_env,
         s3="ok" if storage.bucket_available() else "unavailable",
-        latest_manifest=None,
+        latest_manifest=latest_manifest_generated_at(storage),
     )
 
 

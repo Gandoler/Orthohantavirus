@@ -4,7 +4,11 @@ from fastapi.middleware.cors import CORSMiddleware
 from shared.config import get_settings
 from shared.contracts import HealthResponse, MetadataResponse
 from shared.observability import configure_json_logging, install_access_log_middleware
-from shared.public_artifacts import empty_feature_collection, read_json_artifact
+from shared.public_artifacts import (
+    empty_feature_collection,
+    latest_manifest_generated_at,
+    read_json_artifact,
+)
 from shared.storage import S3Storage
 
 settings = get_settings()
@@ -28,16 +32,17 @@ def health() -> HealthResponse:
         service=settings.service_name,
         app_env=settings.app_env,
         s3="ok" if storage.bucket_available() else "unavailable",
-        latest_manifest=None,
+        latest_manifest=latest_manifest_generated_at(storage),
     )
 
 
 @app.get("/v1/metadata", response_model=MetadataResponse)
 def metadata() -> MetadataResponse:
-    manifest = read_json_artifact(S3Storage(settings), "manifests/latest.json", {})
+    storage = S3Storage(settings)
+    manifest = read_json_artifact(storage, "manifests/latest.json", {})
     return MetadataResponse(
         app_env=settings.app_env,
-        latest_manifest=None,
+        latest_manifest=latest_manifest_generated_at(storage),
         sources=[source["source"] for source in manifest.get("sources", [])],
         notes=[] if manifest else ["No public ingestion manifest has been published yet."],
     )

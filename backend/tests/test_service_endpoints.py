@@ -8,6 +8,7 @@ from shared.storage import S3Storage
 
 PUBLIC_ARTIFACTS = {
     "manifests/latest.json": {
+        "generated_at": "2026-05-12T00:00:00+00:00",
         "sources": [{"source": "cdc"}, {"source": "who"}],
         "artifacts": [],
     },
@@ -68,13 +69,14 @@ def patch_artifacts(monkeypatch) -> None:
 
 
 def test_map_api_health(monkeypatch) -> None:
-    monkeypatch.setattr(S3Storage, "bucket_available", lambda self: True)
+    patch_artifacts(monkeypatch)
 
     response = TestClient(map_app).get("/health")
 
     assert response.status_code == 200
     assert response.json()["status"] == "ok"
     assert response.json()["s3"] == "ok"
+    assert response.json()["latest_manifest"] == "2026-05-12T00:00:00Z"
 
 
 def test_map_api_metadata(monkeypatch) -> None:
@@ -84,6 +86,7 @@ def test_map_api_metadata(monkeypatch) -> None:
 
     assert response.status_code == 200
     assert response.json()["sources"] == ["cdc", "who"]
+    assert response.json()["latest_manifest"] == "2026-05-12T00:00:00Z"
 
 
 def test_map_api_public_artifact_endpoints(monkeypatch) -> None:
@@ -99,13 +102,14 @@ def test_map_api_public_artifact_endpoints(monkeypatch) -> None:
 
 
 def test_news_service_health(monkeypatch) -> None:
-    monkeypatch.setattr(S3Storage, "bucket_available", lambda self: True)
+    patch_artifacts(monkeypatch)
 
     response = TestClient(news_app).get("/health")
 
     assert response.status_code == 200
     assert response.json()["status"] == "ok"
     assert response.json()["s3"] == "ok"
+    assert response.json()["latest_manifest"] == "2026-05-12T00:00:00Z"
 
 
 def test_news_service_feed(monkeypatch) -> None:
