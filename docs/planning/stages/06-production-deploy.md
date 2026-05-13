@@ -37,6 +37,9 @@ Deploy the MVP on a VPS with Docker Compose, HTTPS, storage, backups, health che
 | TBD | Add backup and restore docs | infra | P1 | done |
 | TBD | Add production smoke test checklist | infra | P1 | done |
 | OHV-034 | Harden production admin auth at reverse proxy layer | infra | P0 | done |
+| OHV-042 | Run production security review | security | P0 | done |
+| OHV-043 | Write production deployment and update playbook | infra | P0 | done |
+| OHV-044 | Add encrypted remote backup sync | infra | P0 | todo |
 
 ## Acceptance Criteria
 
@@ -48,6 +51,8 @@ Deploy the MVP on a VPS with Docker Compose, HTTPS, storage, backups, health che
 - [x] Scheduled ingestion is documented with cron example.
 - [x] S3/MinIO data uses persistent volume.
 - [x] Backup/restore commands are documented.
+- [x] Production security review is documented.
+- [x] Fast update and rollback playbook is documented.
 
 ## Production Smoke Test
 
@@ -85,7 +90,10 @@ Implemented:
 - `.env.prod.example`;
 - deploy script;
 - MinIO backup and restore scripts;
-- operations runbook with local/prod deploy, cron, backup, and smoke commands.
+- operations runbook with local/prod deploy, cron, backup, and smoke commands;
+- production security review;
+- deployment/update/observability playbook;
+- hardened CORS, browser security headers, non-root app containers, deploy secret preflight, and Docker log rotation.
 
 Verification:
 
@@ -97,4 +105,7 @@ Verification:
 Remaining:
 
 - run a real VPS deploy with DNS and production secrets;
+- add encrypted remote backup sync;
+- add uptime/stale-manifest alerts;
+- add CI scanning and immutable image publishing;
 - decide whether to keep single-VPS MinIO or move storage to managed S3 after MVP traffic is known.

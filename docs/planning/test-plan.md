@@ -204,6 +204,25 @@ Checks:
 - API request logs are JSON and include service, event, method, path, status code, and duration;
 - Grafana provisions the Loki datasource and backend logs dashboard.
 
+### 11. Production Security Checks
+
+Commands:
+
+```bash
+docker compose --env-file .env.prod.example -f docker-compose.prod.yml config
+docker run --rm -e PUBLIC_DOMAIN=hanta.example.com -e ADMIN_DOMAIN=admin.hanta.example.com -e ADMIN_BASIC_AUTH_USER=admin -e 'ADMIN_BASIC_AUTH_HASH=...' -v "$PWD/infra/caddy/Caddyfile:/etc/caddy/Caddyfile:ro" caddy:2-alpine caddy validate --config /etc/caddy/Caddyfile
+docker run --rm -v "$PWD/frontend/Caddyfile:/etc/caddy/Caddyfile:ro" caddy:2-alpine caddy validate --config /etc/caddy/Caddyfile
+```
+
+Checks:
+
+- production CORS is not wildcard;
+- public Caddy route sets browser security headers and CSP;
+- admin Caddy route requires basic auth;
+- production Docker logs have size limits;
+- backend image runs as a non-root user;
+- deploy script refuses placeholder secrets and example domains.
+
 ## Current External Gap
 
 Local Docker runtime verification has passed. The remaining external gap is a real VPS deploy with DNS, HTTPS issuance, and production secrets.

@@ -81,16 +81,39 @@ Completed:
 
 - added Caddy basic auth to the production admin domain;
 - added admin auth variables to `.env.prod.example` and production Compose.
+- added production security review in `docs/security/security-review.md`;
+- added production deployment/update/observability playbook in `docs/operations/production-deployment-playbook.md`;
+- restricted production CORS by environment;
+- added Caddy security headers and public CSP;
+- changed backend production image to a non-root user;
+- changed production frontend static Caddy to serve on `:8080` as the `caddy` user;
+- added Docker json log rotation and `no-new-privileges` in production Compose;
+- hardened deploy script with placeholder secret checks, Compose config validation, optional pre-deploy MinIO backup, and public health smoke checks.
 
 Verification:
 
 - Caddy config validation through `caddy:2-alpine`: passed;
+- frontend static Caddy config validation through `caddy:2-alpine`: passed;
 - production Compose config render: passed;
 - production frontend/map-api/news-service build: passed.
+- `python3 -m compileall backend`: passed;
+- `.venv/bin/python -m ruff check backend`: passed;
+- `.venv/bin/python -m pytest backend/tests`: 18 passed, 5 PyMuPDF/SWIG deprecation warnings;
+- `pnpm test`: 5 passed;
+- `pnpm test:e2e`: 2 passed;
+- `pnpm build`: passed;
+- `docker compose config`: passed;
+- `docker compose --profile observability config`: passed.
 
 Blocked:
 
 - real HTTPS/domain verification requires a VPS and DNS.
+
+Next:
+
+- add encrypted remote backup sync;
+- add uptime and stale-manifest alerts;
+- add CI dependency, image, and secret scanning.
 
 ## 2026-05-12
 
