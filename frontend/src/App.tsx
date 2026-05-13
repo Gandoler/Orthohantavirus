@@ -30,6 +30,7 @@ import type {
   GeoJSONSourceSpecification,
   Map as MapLibreMap,
   MapGeoJSONFeature,
+  StyleSpecification,
 } from "maplibre-gl";
 import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { Dispatch, SetStateAction } from "react";
@@ -251,6 +252,7 @@ function PublicMapApp({ theme, onToggleTheme }: { theme: Theme; onToggleTheme: (
           dataState={dataState}
           visibleLayers={visibleLayers}
           onSelectRegion={handleSelectRegion}
+          theme={theme}
         />
 
         <header className="map-topbar" aria-label="Application header">
@@ -641,11 +643,13 @@ function HantaMap({
   dataState,
   visibleLayers,
   onSelectRegion,
+  theme,
 }: {
   data: AppData;
   dataState: DataState;
   visibleLayers: LayerState;
   onSelectRegion: (region: RegionFeature) => void;
+  theme: Theme;
 }) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<MapLibreMap | null>(null);
@@ -653,6 +657,7 @@ function HantaMap({
   const dataRef = useRef(data);
   const onSelectRegionRef = useRef(onSelectRegion);
   const visibleLayersRef = useRef(visibleLayers);
+  const themeRef = useRef(theme);
   const [fallbackReason, setFallbackReason] = useState<string | null>(null);
   dataRef.current = data;
   visibleLayersRef.current = visibleLayers;
@@ -680,19 +685,7 @@ function HantaMap({
         try {
           map = new maplibregl.Map({
             container: containerRef.current,
-            style: {
-              version: 8,
-              glyphs: "https://demotiles.maplibre.org/font/{fontstack}/{range}.pbf",
-              sources: {
-                osm: {
-                  type: "raster",
-                  tiles: ["https://tile.openstreetmap.org/{z}/{x}/{y}.png"],
-                  tileSize: 256,
-                  attribution: "OpenStreetMap contributors",
-                },
-              },
-              layers: [{ id: "osm", type: "raster", source: "osm" }],
-            },
+            style: buildMapStyle(themeRef.current),
             center: [15, 25],
             zoom: 2.1,
             minZoom: 1,
@@ -726,6 +719,25 @@ function HantaMap({
       mapRef.current = null;
     };
   }, [fallbackReason]);
+
+  useEffect(() => {
+    themeRef.current = theme;
+    const map = mapRef.current;
+    const maplibregl = mapModuleRef.current;
+    if (!map || !maplibregl) return;
+
+    const handleStyleLoad = () => {
+      installMapLayers(
+        map,
+        maplibregl,
+        () => dataRef.current,
+        visibleLayersRef.current,
+        (region) => onSelectRegionRef.current(region),
+      );
+    };
+    map.once("style.load", handleStyleLoad);
+    map.setStyle(buildMapStyle(theme));
+  }, [theme]);
 
   useEffect(() => {
     const map = mapRef.current;
@@ -767,6 +779,27 @@ function HantaMap({
       <div className="map-container" ref={containerRef} />
     </div>
   );
+}
+
+function buildMapStyle(theme: Theme): StyleSpecification {
+  const variant = theme === "dark" ? "dark_all" : "light_all";
+  const tiles = ["a", "b", "c", "d"].map(
+    (sub) => `https://${sub}.basemaps.cartocdn.com/${variant}/{z}/{x}/{y}.png`,
+  );
+  return {
+    version: 8,
+    glyphs: "https://demotiles.maplibre.org/font/{fontstack}/{range}.pbf",
+    sources: {
+      basemap: {
+        type: "raster",
+        tiles,
+        tileSize: 256,
+        attribution:
+          '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> © <a href="https://carto.com/attributions">CARTO</a>',
+      },
+    },
+    layers: [{ id: "basemap", type: "raster", source: "basemap" }],
+  };
 }
 
 function installMapLayers(
