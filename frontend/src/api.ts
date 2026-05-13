@@ -74,11 +74,21 @@ export type AppData = {
   news: NewsItem[];
 };
 
+export type ManualNewsPayload = {
+  title: string;
+  summary: string | null;
+  source_url: string;
+  published_at: string | null;
+  tags: string[];
+  related_region_codes: string[];
+  language: string;
+};
+
 export const mapApiBaseUrl = import.meta.env.VITE_MAP_API_BASE_URL ?? "http://localhost:8000";
 export const newsApiBaseUrl = import.meta.env.VITE_NEWS_API_BASE_URL ?? "http://localhost:8001";
 
-export async function fetchJson<T>(url: string): Promise<T> {
-  const response = await fetch(url);
+export async function fetchJson<T>(url: string, init?: RequestInit): Promise<T> {
+  const response = await fetch(url, init);
   if (!response.ok) {
     throw new Error(`Request failed: ${response.status} ${url}`);
   }
@@ -94,4 +104,36 @@ export async function loadAppData(): Promise<AppData> {
   ]);
 
   return { regions, outbreaks, summary, news };
+}
+
+export async function loadManualNews(adminToken: string): Promise<NewsItem[]> {
+  return fetchJson<NewsItem[]>(`${newsApiBaseUrl}/v1/admin/news`, {
+    headers: adminAuthHeaders(adminToken),
+  });
+}
+
+export async function createManualNews(payload: ManualNewsPayload, adminToken: string): Promise<NewsItem> {
+  return fetchJson<NewsItem>(`${newsApiBaseUrl}/v1/admin/news`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      ...adminAuthHeaders(adminToken),
+    },
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function deleteManualNews(newsId: string, adminToken: string): Promise<void> {
+  const response = await fetch(`${newsApiBaseUrl}/v1/admin/news/${encodeURIComponent(newsId)}`, {
+    method: "DELETE",
+    headers: adminAuthHeaders(adminToken),
+  });
+  if (!response.ok) {
+    throw new Error(`Request failed: ${response.status}`);
+  }
+}
+
+function adminAuthHeaders(adminToken: string): HeadersInit {
+  const token = adminToken.trim();
+  return token ? { Authorization: `Bearer ${token}` } : {};
 }
