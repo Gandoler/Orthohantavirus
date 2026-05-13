@@ -1,0 +1,22 @@
+{
+  "Data": [
+    {
+      "CaseCount": 1,
+      "IllnessOnsetYear": "1993",
+      "StateFIPS": "04",
+      "Outcome": "Alive"
+    },
+    {
+      "CaseCount": 2,
+      "IllnessOnsetYear": "1993",
+      "StateFIPS": "04",
+      "Outcome": "Dead"
+    },
+    {
+      "CaseCount": 3,
+      "IllnessOnsetYear": "2023",
+      "StateFIPS": "35",
+      "Outcome": "Alive"
+    }
+  ]
+}
