@@ -18,6 +18,8 @@ frontend/.pnpm-store/
 dist/
 *.tsbuildinfo
 coverage/
+test-results/
+playwright-report/
 
 data/
 logs/
