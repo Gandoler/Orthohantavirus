@@ -28,6 +28,9 @@
 
 {$ADMIN_DOMAIN} {
 	encode zstd gzip
+	basic_auth {
+		{$ADMIN_BASIC_AUTH_USER} {$ADMIN_BASIC_AUTH_HASH}
+	}
 
 	handle_path /analytics/* {
 		reverse_proxy umami:3000

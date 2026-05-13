@@ -5,6 +5,8 @@ services:
     environment:
       PUBLIC_DOMAIN: ${PUBLIC_DOMAIN}
       ADMIN_DOMAIN: ${ADMIN_DOMAIN}
+      ADMIN_BASIC_AUTH_USER: ${ADMIN_BASIC_AUTH_USER}
+      ADMIN_BASIC_AUTH_HASH: ${ADMIN_BASIC_AUTH_HASH}
     ports:
       - "80:80"
       - "443:443"
@@ -162,6 +164,8 @@ services:
       GF_SERVER_SERVE_FROM_SUB_PATH: "true"
     volumes:
       - grafana_data:/var/lib/grafana
+      - ./infra/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./infra/grafana/dashboards:/var/lib/grafana/dashboards:ro
     depends_on:
       - loki
 

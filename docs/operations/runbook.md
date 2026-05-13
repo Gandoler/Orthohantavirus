@@ -56,7 +56,13 @@ cp .env.prod.example .env
 docker compose -f docker-compose.prod.yml up -d --build
 ```
 
-Before exposing `ADMIN_DOMAIN`, add reverse-proxy basic auth, a VPN, or an IP allowlist in front of admin tools. Grafana and Umami have their own logins, but the admin domain should still be protected at the edge.
+Generate a new admin password hash before exposing `ADMIN_DOMAIN`:
+
+```bash
+docker run --rm caddy:2-alpine caddy hash-password --plaintext 'replace-with-long-password'
+```
+
+Set the resulting bcrypt value in `ADMIN_BASIC_AUTH_HASH`. Keep the value quoted in `.env` because bcrypt hashes contain `$` characters. Grafana and Umami still need strong own credentials, but Caddy basic auth is the first edge barrier for the whole admin domain.
 
 Regular deploy:
 
@@ -113,4 +119,5 @@ Then check:
 - map renders case markers;
 - news panel renders official updates;
 - Umami dashboard records pageviews;
-- Grafana shows service logs.
+- admin routes require basic auth;
+- Grafana shows service logs in the provisioned `Orthohantavirus Backend Logs` dashboard.
