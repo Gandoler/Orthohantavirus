@@ -22,8 +22,12 @@ docs/planning/
 ├── decisions.md
 ├── status-log.md
 ├── test-plan.md
+├── remaining-work.md
 ├── source-inventory.md
 ├── ecdc-feasibility.md
+├── paho-feasibility.md
+├── rospotrebnadzor-feasibility.md
+├── risk-layer-feasibility.md
 ├── region-codes.md
 ├── stages
 │   ├── 00-discovery.md

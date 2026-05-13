@@ -8,12 +8,8 @@ Keep new items short at first. When an item becomes ready for implementation, ex
 
 | ID | Title | Stage | Area | Priority | Status |
 | --- | --- | --- | --- | --- | --- |
-| OHV-019 | Research PAHO adapter feasibility | 07 | ingestion | P2 | todo |
-| OHV-020 | Research Rospotrebnadzor regional parsing feasibility | 07 | ingestion | P2 | todo |
-| OHV-021 | Research ecological risk layer data model | 07 | geo | P2 | todo |
-| OHV-033 | Add browser visual regression smoke checks | 04 | frontend | P1 | todo |
-| OHV-034 | Harden production admin auth at reverse proxy layer | 06 | infra | P0 | todo |
-| OHV-035 | Add structured JSON access logs for API services | 05 | observability | P1 | todo |
+| OHV-040 | Add CI/CD pipeline for tests and Docker config validation | 06 | infra | P1 | todo |
+| OHV-041 | Add immutable GHCR image publishing | 06 | infra | P2 | todo |
 
 ## Ready
 
@@ -21,6 +17,9 @@ Move items here when requirements and acceptance criteria are clear.
 
 | ID | Title | Stage | Area | Priority | Status |
 | --- | --- | --- | --- | --- | --- |
+| OHV-037 | Implement PAHO adapter proof of concept | 07 | ingestion | P2 | ready |
+| OHV-038 | Add Rospotrebnadzor source registry and parser fixtures | 07 | ingestion | P2 | ready |
+| OHV-039 | Add risk layer contracts and disabled frontend layer | 07 | geo | P2 | ready |
 
 ## In Progress
 
@@ -65,3 +64,9 @@ Move items here when requirements and acceptance criteria are clear.
 | OHV-018 | Add ingestion cron documentation and command | 2026-05-12 | Added cron example in operations runbook |
 | OHV-022 | Verify local Docker Compose runtime | 2026-05-12 | Docker Desktop started; local stack, MinIO writes, APIs, frontend, Umami, Grafana, Loki, and Alloy verified |
 | OHV-031 | Separate local and production frontend Docker images | 2026-05-12 | Avoided dev/prod image-name collision between Vite and Caddy frontend images |
+| OHV-033 | Add browser visual regression smoke checks | 2026-05-13 | Added Playwright desktop/mobile smoke checks for API-loaded frontend rendering |
+| OHV-034 | Harden production admin auth at reverse proxy layer | 2026-05-13 | Added Caddy basic auth on the production admin domain |
+| OHV-035 | Add structured JSON access logs for API services | 2026-05-13 | Added FastAPI middleware and JSON formatter with request log test coverage |
+| OHV-019 | Research PAHO adapter feasibility | 2026-05-13 | Added `docs/planning/paho-feasibility.md` |
+| OHV-020 | Research Rospotrebnadzor regional parsing feasibility | 2026-05-13 | Added `docs/planning/rospotrebnadzor-feasibility.md` |
+| OHV-021 | Research ecological risk layer data model | 2026-05-13 | Added `docs/planning/risk-layer-feasibility.md` |

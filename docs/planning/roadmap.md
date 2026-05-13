@@ -10,10 +10,10 @@ This roadmap breaks the project into practical implementation stages. Dates are 
 | 01 | Foundation | Create monorepo, Docker base, shared contracts, service skeletons | done |
 | 02 | Data Ingestion | Fetch, parse, normalize, and publish first datasets to S3/MinIO | done |
 | 03 | Map API And News API | Serve map/news data in frontend-ready formats | done |
-| 04 | Frontend MVP | Build the map-first UI with news panel and source attribution | review |
-| 05 | Admin Observability | Add visitor analytics, structured logs, dashboards, and health views | review |
+| 04 | Frontend MVP | Build the map-first UI with news panel and source attribution | done |
+| 05 | Admin Observability | Add visitor analytics, structured logs, dashboards, and health views | done |
 | 06 | Production Deploy | Deploy on VPS with Docker Compose, HTTPS, backups, and ingestion schedule | review |
-| 07 | Scale And Risk Layers | Add advanced sources, ecological risk layers, and optional DB/vector tiles | todo |
+| 07 | Scale And Risk Layers | Add advanced sources, ecological risk layers, and optional DB/vector tiles | research |
 
 ## MVP Definition
 
@@ -28,6 +28,7 @@ MVP is complete after stages 01-06 when:
 - frontend shows map, layers, region details, and news panel;
 - Umami and Grafana/Loki/Alloy run locally for admin analytics/logs;
 - source attribution and freshness are visible in the public UI.
+- browser smoke checks cover desktop and mobile rendering.
 
 ## Post-MVP Direction
 

@@ -27,9 +27,12 @@ This stage is intentionally open-ended. Split it into smaller releases when MVP 
 
 | ID | Task | Area | Priority | Status |
 | --- | --- | --- | --- | --- |
-| OHV-019 | Research PAHO adapter feasibility | ingestion | P2 | todo |
-| OHV-020 | Research Rospotrebnadzor regional parsing feasibility | ingestion | P2 | todo |
-| OHV-021 | Research ecological risk layer data model | geo | P2 | todo |
+| OHV-019 | Research PAHO adapter feasibility | ingestion | P2 | done |
+| OHV-020 | Research Rospotrebnadzor regional parsing feasibility | ingestion | P2 | done |
+| OHV-021 | Research ecological risk layer data model | geo | P2 | done |
+| OHV-037 | Implement PAHO adapter proof of concept | ingestion | P2 | todo |
+| OHV-038 | Add Rospotrebnadzor source registry and fixtures | ingestion | P2 | todo |
+| OHV-039 | Add risk layer contracts and disabled frontend layer | geo | P2 | todo |
 | TBD | Add PDF table extraction pipeline | ingestion | P2 | todo |
 | TBD | Add manual review queue | backend | P2 | todo |
 | TBD | Evaluate PostGIS versus DuckDB for API queries | backend | P2 | todo |
@@ -44,8 +47,16 @@ Define acceptance criteria per sub-release. Do not treat this whole stage as one
 
 - Keep official reported cases separate from modeled risk.
 - Add manual review before publishing uncertain parsed PDF data.
+- Treat PAHO as news/document-first until country-level tables are parseable with fixtures.
+- Treat Rospotrebnadzor as a registry of regional source profiles, not one generic crawler.
 - Add PostGIS only when S3 public projections cannot support required queries.
 - Add vector tiles only when GeoJSON performance is a measured problem.
+
+## Research Notes
+
+- PAHO feasibility: `docs/planning/paho-feasibility.md`.
+- Rospotrebnadzor feasibility: `docs/planning/rospotrebnadzor-feasibility.md`.
+- Ecological risk layer feasibility: `docs/planning/risk-layer-feasibility.md`.
 
 ## Risks
 

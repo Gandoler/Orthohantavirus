@@ -12,6 +12,8 @@ Use this file for architecture and product decisions that should not be rediscov
 | ADR-004 | Use MapLibre GL JS as the frontend map engine | accepted | 2026-05-12 |
 | ADR-005 | Use MinIO for first VPS deploy, keep managed S3 compatible | accepted | 2026-05-12 |
 | ADR-006 | Use ISO region codes and explicit geo precision | accepted | 2026-05-12 |
+| ADR-007 | Keep admin tools behind edge authentication | accepted | 2026-05-13 |
+| ADR-008 | Keep ecological risk layers separate from reported cases | accepted | 2026-05-13 |
 
 ## ADR-001: Use Docker Compose For MVP Production
 
@@ -132,3 +134,47 @@ Consequences:
 Review trigger:
 
 Revisit when adding admin2-level data or sources whose regions do not map cleanly to ISO subdivisions.
+
+## ADR-007: Keep Admin Tools Behind Edge Authentication
+
+Status: accepted
+
+Context:
+
+Umami and Grafana have their own login flows, but exposing admin dashboards directly increases blast radius if a tool is misconfigured or has weak credentials.
+
+Decision:
+
+Protect the production admin domain with Caddy basic auth before requests reach Umami or Grafana. Keep the public analytics script and event ingest route on the public domain without exposing the dashboard.
+
+Consequences:
+
+- Admin tools have an extra edge barrier.
+- Production deploys must generate and store a bcrypt admin password hash.
+- Public analytics collection remains possible without making the analytics dashboard public.
+
+Review trigger:
+
+Revisit if the project moves admin access behind VPN, Cloudflare Access, or a central SSO provider.
+
+## ADR-008: Keep Ecological Risk Layers Separate From Reported Cases
+
+Status: accepted
+
+Context:
+
+Reservoir-host occurrence and land-cover data can help explain ecological suitability, but they are not surveillance data and can be misread as confirmed infection locations.
+
+Decision:
+
+Publish ecological/modelled data only through separate risk-layer contracts and artifacts. Do not merge risk scores into official reported-case GeoJSON.
+
+Consequences:
+
+- The public UI can label modelled data clearly.
+- Source confidence and model version stay explicit.
+- Risk-layer work can proceed without weakening trust in official reported-case data.
+
+Review trigger:
+
+Revisit before publishing any modelled layer publicly or before adding alerting based on model outputs.

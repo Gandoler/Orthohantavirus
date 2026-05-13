@@ -2,6 +2,96 @@
 
 Use this file for chronological progress notes. Keep it concise and factual.
 
+## 2026-05-13
+
+### Remaining Work Audit
+
+Status: done
+
+Completed:
+
+- audited remaining MVP and post-MVP work;
+- added `docs/planning/remaining-work.md`;
+- closed P0/P1 local gaps for admin protection, JSON access logs, and browser smoke tests;
+- researched PAHO, Rospotrebnadzor, and ecological risk-layer feasibility;
+- moved next post-MVP implementation tasks to `ready`.
+
+Verification:
+
+- `python3 -m compileall backend`: passed;
+- `.venv/bin/python -m ruff check backend`: passed;
+- `.venv/bin/python -m pytest backend/tests`: 17 passed, 5 PyMuPDF/SWIG deprecation warnings;
+- `pnpm test`: 5 passed;
+- `pnpm test:e2e`: 2 passed;
+- `pnpm build`: passed;
+- `docker compose config`: passed;
+- `docker compose --profile observability config`: passed;
+- `docker compose --env-file .env.prod.example -f docker-compose.prod.yml config`: passed;
+- Caddy config validation through `caddy:2-alpine`: passed;
+- `docker compose --profile observability up -d --build`: passed;
+- local smoke checks returned 200/ok for map API, news service, frontend, and Grafana;
+- `docker compose --env-file .env.prod.example -f docker-compose.prod.yml build frontend map-api news-service`: passed.
+
+Blocked:
+
+- real VPS production deploy still requires server access, DNS, and production secrets.
+
+Next:
+
+- implement PAHO adapter proof of concept;
+- add Rospotrebnadzor source registry and manual-review-first parser fixtures;
+- add risk-layer contracts and disabled frontend layer;
+- add CI/CD pipeline before repeated server deploys.
+
+### Stage 04: Frontend MVP
+
+Status: done
+
+Completed:
+
+- added Playwright browser smoke checks for desktop and mobile;
+- mocked map/news APIs in browser tests;
+- blocked external OSM tile requests in tests to keep smoke checks deterministic.
+
+Verification:
+
+- `pnpm test:e2e`: 2 passed.
+
+### Stage 05: Admin Observability
+
+Status: done
+
+Completed:
+
+- added structured JSON access logging middleware for map API and news service;
+- added API request log test coverage;
+- added Grafana Loki datasource provisioning;
+- added backend logs dashboard provisioning.
+
+Verification:
+
+- `.venv/bin/python -m pytest backend/tests/test_service_endpoints.py -q`: 8 passed.
+- local API log smoke produced a JSON `request_finished` record for `GET /health`.
+
+### Stage 06: Production Deploy
+
+Status: review
+
+Completed:
+
+- added Caddy basic auth to the production admin domain;
+- added admin auth variables to `.env.prod.example` and production Compose.
+
+Verification:
+
+- Caddy config validation through `caddy:2-alpine`: passed;
+- production Compose config render: passed;
+- production frontend/map-api/news-service build: passed.
+
+Blocked:
+
+- real HTTPS/domain verification requires a VPS and DNS.
+
 ## 2026-05-12
 
 ### Stage 00: Discovery

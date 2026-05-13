@@ -35,7 +35,8 @@ Build the first usable public experience: an interactive map with a left news pa
 | TBD | Implement API client with TanStack Query | frontend | P2 | deferred |
 | TBD | Implement map layer toggles | frontend | P1 | done |
 | TBD | Implement region detail panel | frontend | P1 | done |
-| TBD | Implement mobile bottom sheet behavior | frontend | P1 | deferred |
+| OHV-033 | Add browser visual regression smoke checks | frontend | P1 | done |
+| TBD | Implement mobile bottom sheet behavior | frontend | P2 | deferred |
 
 ## Acceptance Criteria
 
@@ -45,11 +46,11 @@ Build the first usable public experience: an interactive map with a left news pa
 - [x] User can toggle at least reported cases and outbreaks layers.
 - [x] Each visible data item has source and freshness information.
 - [x] Modeled risk is visually and textually separated from reported cases if present.
-- [ ] Frontend has browser-level smoke tests for API loading and main screen rendering.
+- [x] Frontend has browser-level smoke tests for API loading and main screen rendering.
 
 ## Current Status
 
-Status: review
+Status: done
 
 Implemented:
 
@@ -58,19 +59,20 @@ Implemented:
 - summary metrics, news panel, selected-region panel;
 - source links, source labels, freshness, live/fallback data state;
 - optional Umami analytics events for source links, layer toggles, and region selection;
-- responsive layout CSS.
+- responsive layout CSS;
+- Playwright smoke test for desktop and mobile viewports.
 
 Verification:
 
 - `pnpm test`: 5 passed;
+- `pnpm test:e2e`: 2 passed;
 - `pnpm build`: passed;
 - `docker compose up --build -d frontend`: frontend container started;
 - `curl -I http://localhost:5173/`: returned `HTTP/1.1 200 OK`.
 
-Remaining:
+Deferred:
 
-- add Playwright/browser visual smoke checks for desktop/mobile;
-- improve mobile details into a true bottom-sheet interaction.
+- improve mobile details into a true bottom-sheet interaction after real usage data shows it is needed.
 
 ## UX Rules
 

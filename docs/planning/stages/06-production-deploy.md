@@ -36,13 +36,14 @@ Deploy the MVP on a VPS with Docker Compose, HTTPS, storage, backups, health che
 | TBD | Add `.env.prod.example` | infra | P0 | done |
 | TBD | Add backup and restore docs | infra | P1 | done |
 | TBD | Add production smoke test checklist | infra | P1 | done |
+| OHV-034 | Harden production admin auth at reverse proxy layer | infra | P0 | done |
 
 ## Acceptance Criteria
 
 - [x] `docker compose -f docker-compose.prod.yml config` renders with `.env.prod.example`.
 - [ ] Public frontend is reachable on HTTPS.
 - [ ] `/api/map/health` and `/api/news/health` are reachable through reverse proxy.
-- [ ] Admin analytics and Grafana require authentication.
+- [x] Admin analytics and Grafana require authentication.
 - [x] Ingestion can be triggered manually through documented Compose command.
 - [x] Scheduled ingestion is documented with cron example.
 - [x] S3/MinIO data uses persistent volume.
@@ -80,6 +81,7 @@ Implemented:
 
 - `docker-compose.prod.yml` with Caddy, frontend, APIs, ingestion tool profile, MinIO, Umami, Loki, Grafana, Alloy;
 - production Caddy routes for public frontend, `/api/map`, `/api/news`, analytics ingest, and admin dashboards;
+- Caddy basic auth on the admin domain;
 - `.env.prod.example`;
 - deploy script;
 - MinIO backup and restore scripts;
@@ -89,10 +91,10 @@ Verification:
 
 - `docker compose --env-file .env.prod.example -f docker-compose.prod.yml config`: passed;
 - `docker compose --env-file .env.prod.example -f docker-compose.prod.yml build frontend map-api news-service`: passed;
+- Caddy config validation through `caddy:2-alpine`: passed;
 - production frontend image uses a separate `orthohantavirus-frontend-prod` image name from local dev.
 
 Remaining:
 
 - run a real VPS deploy with DNS and production secrets;
-- add admin-domain basic auth/VPN/IP allowlist before exposing dashboards;
 - decide whether to keep single-VPS MinIO or move storage to managed S3 after MVP traffic is known.

@@ -1,6 +1,6 @@
 # Full Verification Plan
 
-Last updated: 2026-05-12
+Last updated: 2026-05-13
 
 This plan defines the verification gate for the MVP skeleton. It is intentionally broader than unit tests: source parsing, projections, APIs, frontend, Docker configuration, production configuration, and planning status must all be checked.
 
@@ -16,6 +16,8 @@ Backend:
 Frontend:
 
 - `pnpm build`
+- `pnpm test`
+- `pnpm test:e2e`
 
 Docker:
 
@@ -112,6 +114,7 @@ Commands:
 cd frontend
 pnpm build
 pnpm test
+pnpm test:e2e
 ```
 
 Manual/browser smoke:
@@ -122,6 +125,7 @@ Manual/browser smoke:
 - source/freshness indicators are visible;
 - API base URLs are configurable;
 - mobile layout does not overlap text.
+- Playwright smoke passes for desktop and mobile projects.
 
 ### 7. Docker Runtime Tests
 
@@ -184,6 +188,22 @@ Checks:
 - verification results are recorded;
 - next actions are explicit.
 
+### 10. Observability And Admin Access Checks
+
+Commands:
+
+```bash
+docker compose --profile observability config
+docker compose --env-file .env.prod.example -f docker-compose.prod.yml config
+```
+
+Checks:
+
+- production admin domain has reverse-proxy authentication before `/analytics` and `/grafana`;
+- public analytics script and ingest routes remain available on the public domain;
+- API request logs are JSON and include service, event, method, path, status code, and duration;
+- Grafana provisions the Loki datasource and backend logs dashboard.
+
 ## Current External Gap
 
-Local Docker runtime verification has passed. The remaining external gap is a real VPS deploy with DNS, HTTPS issuance, production secrets, and admin access protection.
+Local Docker runtime verification has passed. The remaining external gap is a real VPS deploy with DNS, HTTPS issuance, and production secrets.
