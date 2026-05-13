@@ -24,4 +24,8 @@ FROM caddy:2-alpine
 COPY Caddyfile /etc/caddy/Caddyfile
 COPY --from=build /app/dist /usr/share/caddy
 
-USER caddy
+RUN addgroup -S app \
+    && adduser -S -D -H -G app app \
+    && chown -R app:app /usr/share/caddy /data /config
+
+USER app
