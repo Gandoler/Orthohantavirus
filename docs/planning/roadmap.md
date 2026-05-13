@@ -6,13 +6,13 @@ This roadmap breaks the project into practical implementation stages. Dates are 
 
 | Stage | Name | Goal | Status |
 | --- | --- | --- | --- |
-| 00 | Discovery | Validate sources, scope, and product assumptions | todo |
-| 01 | Foundation | Create monorepo, Docker base, shared contracts, service skeletons | todo |
-| 02 | Data Ingestion | Fetch, parse, normalize, and publish first datasets to S3/MinIO | todo |
-| 03 | Map API And News API | Serve map/news data in frontend-ready formats | todo |
-| 04 | Frontend MVP | Build the map-first UI with news panel and source attribution | todo |
-| 05 | Admin Observability | Add visitor analytics, structured logs, dashboards, and health views | todo |
-| 06 | Production Deploy | Deploy on VPS with Docker Compose, HTTPS, backups, and ingestion schedule | todo |
+| 00 | Discovery | Validate sources, scope, and product assumptions | done |
+| 01 | Foundation | Create monorepo, Docker base, shared contracts, service skeletons | done |
+| 02 | Data Ingestion | Fetch, parse, normalize, and publish first datasets to S3/MinIO | done |
+| 03 | Map API And News API | Serve map/news data in frontend-ready formats | done |
+| 04 | Frontend MVP | Build the map-first UI with news panel and source attribution | review |
+| 05 | Admin Observability | Add visitor analytics, structured logs, dashboards, and health views | review |
+| 06 | Production Deploy | Deploy on VPS with Docker Compose, HTTPS, backups, and ingestion schedule | review |
 | 07 | Scale And Risk Layers | Add advanced sources, ecological risk layers, and optional DB/vector tiles | todo |
 
 ## MVP Definition
@@ -20,13 +20,13 @@ This roadmap breaks the project into practical implementation stages. Dates are 
 MVP is complete after stages 01-06 when:
 
 - the app runs locally through Docker Compose;
-- production can be deployed through Docker Compose on one VPS;
+- production config can be built and rendered through Docker Compose for one VPS;
 - CDC, ECDC, and WHO source adapters produce normalized data;
+- ingestion writes raw, normalized, public, and manifest artifacts to MinIO;
 - map API serves region/outbreak/timeline data;
-- news service serves official news items;
+- news service serves official news items with basic filters;
 - frontend shows map, layers, region details, and news panel;
-- Umami shows visitor counters to admins;
-- Loki/Grafana show service logs to admins;
+- Umami and Grafana/Loki/Alloy run locally for admin analytics/logs;
 - source attribution and freshness are visible in the public UI.
 
 ## Post-MVP Direction

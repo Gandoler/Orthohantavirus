@@ -20,6 +20,11 @@ docs/planning/
 ├── roadmap.md
 ├── backlog.md
 ├── decisions.md
+├── status-log.md
+├── test-plan.md
+├── source-inventory.md
+├── ecdc-feasibility.md
+├── region-codes.md
 ├── stages
 │   ├── 00-discovery.md
 │   ├── 01-foundation.md
