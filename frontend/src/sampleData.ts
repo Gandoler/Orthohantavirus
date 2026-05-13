@@ -1,0 +1,95 @@
+import type { AppData } from "./api";
+
+export const sampleData: AppData = {
+  regions: {
+    type: "FeatureCollection",
+    generated_at: "2026-05-12T00:00:00Z",
+    features: [
+      {
+        type: "Feature",
+        id: "US-AZ",
+        geometry: { type: "Point", coordinates: [-111.4312, 33.7298] },
+        properties: {
+          region_code: "US-AZ",
+          label: "Arizona",
+          geo_precision: "admin1",
+          confirmed_cases: 92,
+          deaths: 31,
+          sources: ["cdc"],
+          confidence: ["official"],
+          period_start: "1993-01-01",
+          period_end: "2023-12-31",
+          data_type: "reported_cases",
+        },
+      },
+      {
+        type: "Feature",
+        id: "FI",
+        geometry: { type: "Point", coordinates: [25.7482, 61.9241] },
+        properties: {
+          region_code: "FI",
+          label: "Finland",
+          geo_precision: "country",
+          confirmed_cases: 806,
+          deaths: 0,
+          sources: ["ecdc"],
+          confidence: ["official_report_derived"],
+          period_start: "2023-01-01",
+          period_end: "2023-12-31",
+          data_type: "reported_cases",
+        },
+      },
+    ],
+  },
+  outbreaks: {
+    type: "FeatureCollection",
+    generated_at: "2026-05-12T00:00:00Z",
+    features: [
+      {
+        type: "Feature",
+        id: "who-2026-don600",
+        geometry: null,
+        properties: {
+          title: "Hantavirus cluster linked to cruise ship travel, Multi-country",
+          source: "who",
+          source_url: "https://www.who.int/emergencies/disease-outbreak-news/item/2026-DON600",
+          status: "active",
+          pathogen: "andes_orthohantavirus",
+          reported_at: "2026-05-08",
+          confirmed_cases: 6,
+          probable_cases: 2,
+          deaths: 3,
+          confidence: "official",
+          location_label: "Multi-country",
+          data_type: "outbreak_report",
+        },
+      },
+    ],
+  },
+  summary: {
+    generated_at: "2026-05-12T00:00:00Z",
+    sources: ["cdc", "ecdc", "who"],
+    reported_case_records: 3,
+    reported_cases_total: 988,
+    reported_deaths_total: 34,
+    outbreak_events: 1,
+    news_items: 1,
+  },
+  news: [
+    {
+      id: "who-2026-don600",
+      source: "who",
+      source_url: "https://www.who.int/emergencies/disease-outbreak-news/item/2026-DON600",
+      published_at: "2026-05-08T18:00:00Z",
+      fetched_at: "2026-05-12T00:00:00Z",
+      title: "Hantavirus cluster linked to cruise ship travel, Multi-country",
+      summary:
+        "WHO reported a cluster of hantavirus infections linked to cruise ship travel, with Andes virus identified in confirmed cases.",
+      tags: ["official", "hantavirus", "andes-virus"],
+      related_region_codes: [],
+      related_outbreak_ids: ["who-2026-don600"],
+      language: "en",
+      confidence: "official",
+    },
+  ],
+};
