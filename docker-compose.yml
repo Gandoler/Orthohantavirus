@@ -46,6 +46,7 @@ services:
     environment:
       SERVICE_NAME: map-api
       APP_ENV: ${APP_ENV:-local}
+      APP_PUBLIC_BASE_URL: ${APP_PUBLIC_BASE_URL:-http://localhost:5173}
       S3_ENDPOINT_URL: ${S3_ENDPOINT_URL:-http://minio:9000}
       S3_REGION: ${S3_REGION:-us-east-1}
       S3_BUCKET: ${S3_BUCKET:-orthohantavirus-data}
@@ -72,6 +73,7 @@ services:
     environment:
       SERVICE_NAME: news-service
       APP_ENV: ${APP_ENV:-local}
+      APP_PUBLIC_BASE_URL: ${APP_PUBLIC_BASE_URL:-http://localhost:5173}
       S3_ENDPOINT_URL: ${S3_ENDPOINT_URL:-http://minio:9000}
       S3_REGION: ${S3_REGION:-us-east-1}
       S3_BUCKET: ${S3_BUCKET:-orthohantavirus-data}

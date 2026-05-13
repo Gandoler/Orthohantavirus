@@ -1,9 +1,11 @@
 from datetime import UTC, datetime
+from html import escape
 import re
 import secrets
 from typing import Annotated
 
 from fastapi import Depends, FastAPI, Header, HTTPException, Query, Response, status
+from fastapi.responses import HTMLResponse
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import Field, HttpUrl
 
@@ -17,6 +19,7 @@ from shared.news_store import (
 )
 from shared.observability import configure_json_logging, install_access_log_middleware
 from shared.public_artifacts import latest_manifest_generated_at
+from shared.seo import canonical_url, format_human_date, html_document, slug
 from shared.storage import S3Storage
 
 settings = get_settings()
@@ -112,6 +115,64 @@ def news_tags() -> list[str]:
 
 @app.get("/v1/news/{news_id}", response_model=NewsItem)
 def news_item(news_id: str) -> NewsItem:
+    return find_news_item(news_id)
+
+
+@app.get("/news/{news_id}", response_class=HTMLResponse)
+def public_news_page(news_id: str) -> HTMLResponse:
+    item = find_news_item(news_id)
+    published = format_human_date(item.published_at or item.fetched_at)
+    description = item.summary or (
+        f"Verified {item.source.upper()} update for Orthohantavirus Monitor, published {published}."
+    )
+    related_regions = "".join(
+        f'<li><a href="/countries/{slug(region_code)}">{escape(region_code)}</a></li>'
+        for region_code in item.related_region_codes
+    )
+    related_outbreaks = "".join(
+        f'<li><a href="/outbreaks/{slug(outbreak_id)}">{escape(outbreak_id)}</a></li>'
+        for outbreak_id in item.related_outbreak_ids
+    )
+    tags = ", ".join(item.tags) if item.tags else "surveillance"
+    body = f"""
+        <p><strong>Source:</strong> <a href="{escape(str(item.source_url))}" rel="nofollow noopener">{escape(item.source.upper())}</a></p>
+        <p><strong>Published:</strong> <time datetime="{escape(published)}">{escape(published)}</time></p>
+        <p><strong>Tags:</strong> {escape(tags)}</p>
+        <p>{escape(description)}</p>
+        <h2>Related surveillance records</h2>
+        <ul>
+          {related_regions or '<li><a href="/">Open the interactive map</a></li>'}
+          {related_outbreaks}
+        </ul>
+    """
+    canonical = canonical_url(settings.app_public_base_url, f"/news/{news_id}")
+    return HTMLResponse(
+        html_document(
+            title=f"{item.title} | Orthohantavirus Monitor",
+            description=description,
+            canonical=canonical,
+            h1=item.title,
+            body=body,
+            updated_at=published,
+            structured_data={
+                "@context": "https://schema.org",
+                "@type": "NewsArticle",
+                "headline": item.title,
+                "description": description,
+                "datePublished": published,
+                "dateModified": format_human_date(item.fetched_at),
+                "url": canonical,
+                "isAccessibleForFree": True,
+                "publisher": {
+                    "@type": "Organization",
+                    "name": "Orthohantavirus Monitor",
+                },
+            },
+        )
+    )
+
+
+def find_news_item(news_id: str) -> NewsItem:
     for item in load_merged_news_items(S3Storage(settings)):
         if item.id == news_id:
             return item

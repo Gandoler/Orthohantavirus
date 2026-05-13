@@ -34,9 +34,42 @@ PUBLIC_ARTIFACTS = {
     },
     "public/map/latest/regions.geojson": {
         "type": "FeatureCollection",
-        "features": [{"type": "Feature", "id": "US-AZ", "geometry": None, "properties": {}}],
+        "features": [
+            {
+                "type": "Feature",
+                "id": "US-AZ",
+                "geometry": {"type": "Point", "coordinates": [-111.09, 34.05]},
+                "properties": {
+                    "region_code": "US-AZ",
+                    "label": "Arizona",
+                    "confirmed_cases": 10,
+                    "deaths": 2,
+                    "sources": ["cdc"],
+                    "period_end": "2023-12-31",
+                },
+            }
+        ],
     },
-    "public/map/latest/outbreaks.geojson": {"type": "FeatureCollection", "features": []},
+    "public/map/latest/outbreaks.geojson": {
+        "type": "FeatureCollection",
+        "features": [
+            {
+                "type": "Feature",
+                "id": "who-test-outbreak",
+                "geometry": {"type": "Point", "coordinates": [-70.66, -33.45]},
+                "properties": {
+                    "title": "WHO outbreak report",
+                    "source": "who",
+                    "source_url": "https://www.who.int/emergencies/disease-outbreak-news",
+                    "status": "active",
+                    "reported_at": "2026-05-08T00:00:00Z",
+                    "confirmed_cases": 3,
+                    "deaths": 1,
+                    "location_label": "Chile",
+                },
+            }
+        ],
+    },
     "public/stats/latest/summary.json": {
         "sources": ["cdc", "who"],
         "reported_cases_total": 10,
@@ -115,11 +148,33 @@ def test_map_api_public_artifact_endpoints(monkeypatch) -> None:
     client = TestClient(map_app)
 
     assert client.get("/v1/map/regions").json()["features"][0]["id"] == "US-AZ"
-    assert client.get("/v1/map/outbreaks").json()["features"] == []
+    assert client.get("/v1/map/outbreaks").json()["features"][0]["id"] == "who-test-outbreak"
     assert client.get("/v1/stats/summary").json()["reported_cases_total"] == 10
     assert client.get("/v1/stats/summary").json()["news_items"] == 3
     assert client.get("/v1/stats/timeline").json()["items"][0]["year"] == 2023
     assert client.get("/v1/sources").json()["sources"][0]["source"] == "cdc"
+
+
+def test_map_api_indexable_country_outbreak_and_sitemap_pages(monkeypatch) -> None:
+    patch_artifacts(monkeypatch)
+
+    client = TestClient(map_app)
+
+    country_response = client.get("/countries/US-AZ")
+    assert country_response.status_code == 200
+    assert "Arizona hantavirus surveillance" in country_response.text
+    assert "<h1>Arizona hantavirus surveillance</h1>" in country_response.text
+
+    outbreak_response = client.get("/outbreaks/who-test-outbreak")
+    assert outbreak_response.status_code == 200
+    assert "WHO outbreak report" in outbreak_response.text
+
+    sitemap_response = client.get("/sitemap.xml")
+    assert sitemap_response.status_code == 200
+    assert sitemap_response.headers["content-type"].startswith("application/xml")
+    assert "/countries/US-AZ" in sitemap_response.text
+    assert "/outbreaks/who-test-outbreak" in sitemap_response.text
+    assert "/news/who-test" in sitemap_response.text
 
 
 def test_news_service_health(monkeypatch) -> None:
@@ -168,6 +223,17 @@ def test_news_service_item_and_tags(monkeypatch) -> None:
         "surveillance",
     ]
     assert client.get("/v1/news/missing").status_code == 404
+
+
+def test_news_service_indexable_news_page(monkeypatch) -> None:
+    patch_artifacts(monkeypatch)
+
+    response = TestClient(news_app).get("/news/who-test")
+
+    assert response.status_code == 200
+    assert "<h1>Test news</h1>" in response.text
+    assert "application/ld+json" in response.text
+    assert 'rel="canonical"' in response.text
 
 
 def test_admin_news_requires_token(monkeypatch) -> None:

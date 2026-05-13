@@ -7,6 +7,7 @@ class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
     app_env: str = "local"
+    app_public_base_url: str = "http://localhost:5173"
     service_name: str = "orthohantavirus-service"
     log_level: str = "info"
     cors_allow_origins: str = "*"
