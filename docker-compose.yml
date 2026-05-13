@@ -50,6 +50,7 @@ services:
       S3_ACCESS_KEY_ID: ${S3_ACCESS_KEY_ID:-minioadmin}
       S3_SECRET_ACCESS_KEY: ${S3_SECRET_ACCESS_KEY:-minioadmin}
       S3_FORCE_PATH_STYLE: ${S3_FORCE_PATH_STYLE:-true}
+      CORS_ALLOW_ORIGINS: ${CORS_ALLOW_ORIGINS:-*}
       LOG_LEVEL: ${LOG_LEVEL:-info}
     ports:
       - "${MAP_API_PORT:-8000}:8000"
@@ -75,6 +76,7 @@ services:
       S3_ACCESS_KEY_ID: ${S3_ACCESS_KEY_ID:-minioadmin}
       S3_SECRET_ACCESS_KEY: ${S3_SECRET_ACCESS_KEY:-minioadmin}
       S3_FORCE_PATH_STYLE: ${S3_FORCE_PATH_STYLE:-true}
+      CORS_ALLOW_ORIGINS: ${CORS_ALLOW_ORIGINS:-*}
       LOG_LEVEL: ${LOG_LEVEL:-info}
     ports:
       - "${NEWS_SERVICE_PORT:-8001}:8001"

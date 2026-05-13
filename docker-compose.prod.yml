@@ -1,7 +1,17 @@
+---
+x-default-logging: &default-logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "5"
+
 services:
   reverse-proxy:
     image: caddy:2-alpine
     restart: unless-stopped
+    logging: *default-logging
+    security_opt:
+      - no-new-privileges:true
     environment:
       PUBLIC_DOMAIN: ${PUBLIC_DOMAIN}
       ADMIN_DOMAIN: ${ADMIN_DOMAIN}
@@ -23,6 +33,9 @@ services:
 
   frontend:
     image: orthohantavirus-frontend-prod
+    logging: *default-logging
+    security_opt:
+      - no-new-privileges:true
     build:
       context: ./frontend
       args:
@@ -37,6 +50,9 @@ services:
       context: ./backend
     command: uvicorn services.map_api.main:app --host 0.0.0.0 --port 8000
     restart: unless-stopped
+    logging: *default-logging
+    security_opt:
+      - no-new-privileges:true
     environment:
       SERVICE_NAME: map-api
       APP_ENV: ${APP_ENV}
@@ -46,6 +62,7 @@ services:
       S3_ACCESS_KEY_ID: ${S3_ACCESS_KEY_ID}
       S3_SECRET_ACCESS_KEY: ${S3_SECRET_ACCESS_KEY}
       S3_FORCE_PATH_STYLE: ${S3_FORCE_PATH_STYLE}
+      CORS_ALLOW_ORIGINS: ${CORS_ALLOW_ORIGINS}
       LOG_LEVEL: ${LOG_LEVEL}
     depends_on:
       minio-init:
@@ -56,6 +73,9 @@ services:
       context: ./backend
     command: uvicorn services.news_service.main:app --host 0.0.0.0 --port 8001
     restart: unless-stopped
+    logging: *default-logging
+    security_opt:
+      - no-new-privileges:true
     environment:
       SERVICE_NAME: news-service
       APP_ENV: ${APP_ENV}
@@ -65,6 +85,7 @@ services:
       S3_ACCESS_KEY_ID: ${S3_ACCESS_KEY_ID}
       S3_SECRET_ACCESS_KEY: ${S3_SECRET_ACCESS_KEY}
       S3_FORCE_PATH_STYLE: ${S3_FORCE_PATH_STYLE}
+      CORS_ALLOW_ORIGINS: ${CORS_ALLOW_ORIGINS}
       LOG_LEVEL: ${LOG_LEVEL}
     depends_on:
       minio-init:
@@ -75,6 +96,9 @@ services:
       context: ./backend
     command: python -m services.data_ingestion run-all
     profiles: ["tools"]
+    logging: *default-logging
+    security_opt:
+      - no-new-privileges:true
     environment:
       SERVICE_NAME: data-ingestion
       APP_ENV: ${APP_ENV}
@@ -95,6 +119,9 @@ services:
     image: quay.io/minio/minio:latest
     command: server /data --console-address ":9001"
     restart: unless-stopped
+    logging: *default-logging
+    security_opt:
+      - no-new-privileges:true
     environment:
       MINIO_ROOT_USER: ${MINIO_ROOT_USER}
       MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
@@ -109,6 +136,9 @@ services:
   minio-init:
     image: quay.io/minio/mc:latest
     restart: "no"
+    logging: *default-logging
+    security_opt:
+      - no-new-privileges:true
     environment:
       MINIO_ENDPOINT: http://minio:9000
       MINIO_ROOT_USER: ${MINIO_ROOT_USER}
@@ -124,6 +154,9 @@ services:
   umami-db:
     image: postgres:16-alpine
     restart: unless-stopped
+    logging: *default-logging
+    security_opt:
+      - no-new-privileges:true
     environment:
       POSTGRES_DB: umami
       POSTGRES_USER: umami
@@ -139,6 +172,9 @@ services:
   umami:
     image: ghcr.io/umami-software/umami:postgresql-latest
     restart: unless-stopped
+    logging: *default-logging
+    security_opt:
+      - no-new-privileges:true
     environment:
       DATABASE_URL: ${UMAMI_DATABASE_URL}
       APP_SECRET: ${UMAMI_APP_SECRET}
@@ -150,6 +186,9 @@ services:
     image: grafana/loki:3.3.2
     command: -config.file=/etc/loki/local-config.yaml
     restart: unless-stopped
+    logging: *default-logging
+    security_opt:
+      - no-new-privileges:true
     volumes:
       - ./infra/loki/loki-config.yml:/etc/loki/local-config.yaml:ro
       - loki_data:/loki
@@ -157,6 +196,9 @@ services:
   grafana:
     image: grafana/grafana:11.4.0
     restart: unless-stopped
+    logging: *default-logging
+    security_opt:
+      - no-new-privileges:true
     environment:
       GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER}
       GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD}
@@ -173,6 +215,9 @@ services:
     image: grafana/alloy:v1.5.1
     command: run /etc/alloy/config.alloy
     restart: unless-stopped
+    logging: *default-logging
+    security_opt:
+      - no-new-privileges:true
     volumes:
       - ./infra/alloy/config.alloy:/etc/alloy/config.alloy:ro
       - /var/run/docker.sock:/var/run/docker.sock:ro

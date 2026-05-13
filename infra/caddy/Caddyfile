@@ -4,6 +4,14 @@
 
 {$PUBLIC_DOMAIN} {
 	encode zstd gzip
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		X-Content-Type-Options "nosniff"
+		Referrer-Policy "strict-origin-when-cross-origin"
+		Permissions-Policy "geolocation=(), microphone=(), camera=(), payment=(), usb=()"
+		X-Frame-Options "DENY"
+		Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://tile.openstreetmap.org; connect-src 'self' https://tile.openstreetmap.org; worker-src 'self' blob:; font-src 'self' data:; object-src 'none'; base-uri 'self'; frame-ancestors 'none'; form-action 'self'"
+	}
 
 	handle_path /api/map/* {
 		reverse_proxy map-api:8000
@@ -22,12 +30,18 @@
 	}
 
 	handle {
-		reverse_proxy frontend:80
+		reverse_proxy frontend:8080
 	}
 }
 
 {$ADMIN_DOMAIN} {
 	encode zstd gzip
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		X-Content-Type-Options "nosniff"
+		Referrer-Policy "strict-origin-when-cross-origin"
+		X-Frame-Options "DENY"
+	}
 	basic_auth {
 		{$ADMIN_BASIC_AUTH_USER} {$ADMIN_BASIC_AUTH_HASH}
 	}

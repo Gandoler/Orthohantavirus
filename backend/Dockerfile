@@ -12,3 +12,9 @@ RUN pip install --no-cache-dir uv \
     && uv pip install --system -e .
 
 COPY . .
+
+RUN groupadd --system app \
+    && useradd --system --gid app --home-dir /app --shell /usr/sbin/nologin app \
+    && chown -R app:app /app
+
+USER app

@@ -14,7 +14,7 @@ app = FastAPI(title="Orthohantavirus News Service", version="0.1.0")
 install_access_log_middleware(app, settings)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=settings.cors_origins,
     allow_methods=["GET"],
     allow_headers=["*"],
 )

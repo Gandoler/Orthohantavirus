@@ -21,4 +21,7 @@ RUN pnpm build
 
 FROM caddy:2-alpine
 
+COPY Caddyfile /etc/caddy/Caddyfile
 COPY --from=build /app/dist /usr/share/caddy
+
+USER caddy
