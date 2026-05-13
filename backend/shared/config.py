@@ -10,6 +10,7 @@ class Settings(BaseSettings):
     service_name: str = "orthohantavirus-service"
     log_level: str = "info"
     cors_allow_origins: str = "*"
+    news_admin_api_token: str = ""
 
     s3_endpoint_url: str | None = "http://minio:9000"
     s3_region: str = "us-east-1"

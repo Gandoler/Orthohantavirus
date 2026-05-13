@@ -87,9 +87,32 @@ Production routes:
 https://hanta.example.com/
 https://hanta.example.com/api/map/health
 https://hanta.example.com/api/news/health
+https://admin.hanta.example.com/admin
 https://admin.hanta.example.com/analytics
 https://admin.hanta.example.com/grafana
 ```
+
+## Manual News Admin
+
+Manual news is stored separately from official ingestion output:
+
+```text
+manual/news/items.json
+```
+
+Production admin flow:
+
+1. Open `https://admin.hanta.example.com/admin`.
+2. Pass Caddy basic auth.
+3. Create or delete manual news in the admin console.
+
+Caddy injects `NEWS_ADMIN_API_TOKEN` when admin-domain requests are proxied to news-service. The public domain does not inject this header, so `/api/news/v1/admin/*` remains blocked by the backend token check.
+
+Local admin flow:
+
+1. Open `http://localhost:5173/admin`.
+2. Enter `NEWS_ADMIN_API_TOKEN` from local `.env`.
+3. Publish a manual item and check `http://localhost:8001/v1/news`.
 
 ## Scheduled Ingestion
 

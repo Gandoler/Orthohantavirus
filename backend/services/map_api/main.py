@@ -3,6 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from shared.config import get_settings
 from shared.contracts import HealthResponse, MetadataResponse
+from shared.news_store import load_merged_news_items
 from shared.observability import configure_json_logging, install_access_log_middleware
 from shared.public_artifacts import (
     empty_feature_collection,
@@ -68,8 +69,9 @@ def map_outbreaks() -> dict:
 
 @app.get("/v1/stats/summary")
 def stats_summary() -> dict:
-    return read_json_artifact(
-        S3Storage(settings),
+    storage = S3Storage(settings)
+    summary = read_json_artifact(
+        storage,
         "public/stats/latest/summary.json",
         {
             "sources": [],
@@ -80,6 +82,8 @@ def stats_summary() -> dict:
             "news_items": 0,
         },
     )
+    summary["news_items"] = len(load_merged_news_items(storage))
+    return summary
 
 
 @app.get("/v1/stats/timeline")

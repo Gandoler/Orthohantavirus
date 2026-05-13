@@ -54,5 +54,16 @@
 		reverse_proxy grafana:3000
 	}
 
-	respond "admin service" 200
+	handle_path /api/news/* {
+		request_header X-Admin-Token {$NEWS_ADMIN_API_TOKEN}
+		reverse_proxy news-service:8001
+	}
+
+	handle /admin* {
+		reverse_proxy frontend:8080
+	}
+
+	handle {
+		redir /admin 302
+	}
 }

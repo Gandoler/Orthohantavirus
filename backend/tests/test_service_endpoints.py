@@ -3,6 +3,7 @@ import orjson
 
 from services.map_api.main import app as map_app
 from services.news_service.main import app as news_app
+from services.news_service.main import settings as news_settings
 from shared.observability.logging import JsonLogFormatter
 from shared.storage import S3Storage
 
@@ -11,6 +12,25 @@ PUBLIC_ARTIFACTS = {
         "generated_at": "2026-05-12T00:00:00+00:00",
         "sources": [{"source": "cdc"}, {"source": "who"}],
         "artifacts": [],
+    },
+    "manual/news/items.json": {
+        "generated_at": "2026-05-12T12:00:00+00:00",
+        "items": [
+            {
+                "id": "manual-test",
+                "source": "manual",
+                "source_url": "https://example.com/manual-hantavirus-note",
+                "published_at": "2026-05-12T12:00:00Z",
+                "fetched_at": "2026-05-12T12:00:00Z",
+                "title": "Manual editorial update",
+                "summary": "Admin-created note.",
+                "tags": ["manual", "editorial"],
+                "related_region_codes": ["US-AZ"],
+                "related_outbreak_ids": [],
+                "language": "ru",
+                "confidence": "secondary_verified",
+            }
+        ],
     },
     "public/map/latest/regions.geojson": {
         "type": "FeatureCollection",
@@ -97,6 +117,7 @@ def test_map_api_public_artifact_endpoints(monkeypatch) -> None:
     assert client.get("/v1/map/regions").json()["features"][0]["id"] == "US-AZ"
     assert client.get("/v1/map/outbreaks").json()["features"] == []
     assert client.get("/v1/stats/summary").json()["reported_cases_total"] == 10
+    assert client.get("/v1/stats/summary").json()["news_items"] == 3
     assert client.get("/v1/stats/timeline").json()["items"][0]["year"] == 2023
     assert client.get("/v1/sources").json()["sources"][0]["source"] == "cdc"
 
@@ -118,7 +139,7 @@ def test_news_service_feed(monkeypatch) -> None:
     response = TestClient(news_app).get("/v1/news")
 
     assert response.status_code == 200
-    assert response.json()[0]["id"] == "who-test"
+    assert response.json()[0]["id"] == "manual-test"
 
 
 def test_news_service_feed_filters(monkeypatch) -> None:
@@ -126,7 +147,8 @@ def test_news_service_feed_filters(monkeypatch) -> None:
 
     client = TestClient(news_app)
 
-    assert [item["id"] for item in client.get("/v1/news?limit=1").json()] == ["who-test"]
+    assert [item["id"] for item in client.get("/v1/news?limit=1").json()] == ["manual-test"]
+    assert [item["id"] for item in client.get("/v1/news?tag=editorial").json()] == ["manual-test"]
     assert [item["id"] for item in client.get("/v1/news?tag=surveillance").json()] == ["cdc-test"]
     assert [item["id"] for item in client.get("/v1/news?source=who").json()] == ["who-test"]
 
@@ -137,8 +159,65 @@ def test_news_service_item_and_tags(monkeypatch) -> None:
     client = TestClient(news_app)
 
     assert client.get("/v1/news/who-test").json()["title"] == "Test news"
-    assert client.get("/v1/news/tags").json() == ["hantavirus", "official", "surveillance"]
+    assert client.get("/v1/news/manual-test").json()["title"] == "Manual editorial update"
+    assert client.get("/v1/news/tags").json() == [
+        "editorial",
+        "hantavirus",
+        "manual",
+        "official",
+        "surveillance",
+    ]
     assert client.get("/v1/news/missing").status_code == 404
+
+
+def test_admin_news_requires_token(monkeypatch) -> None:
+    patch_artifacts(monkeypatch)
+    monkeypatch.setattr(news_settings, "news_admin_api_token", "secret")
+
+    response = TestClient(news_app).get("/v1/admin/news")
+
+    assert response.status_code == 401
+
+
+def test_admin_news_create_and_delete(monkeypatch) -> None:
+    patch_artifacts(monkeypatch)
+    monkeypatch.setattr(news_settings, "news_admin_api_token", "secret")
+    writes = []
+    monkeypatch.setattr(S3Storage, "put_json", lambda self, key, payload: writes.append((key, payload)))
+    client = TestClient(news_app)
+
+    create_response = client.post(
+        "/v1/admin/news",
+        headers={"Authorization": "Bearer secret"},
+        json={
+            "title": "Региональное обновление",
+            "summary": "Ручная новость для ленты.",
+            "source_url": "https://example.com/regional-update",
+            "tags": ["manual", "Russia", "manual"],
+            "related_region_codes": ["ru-mow"],
+        },
+    )
+
+    assert create_response.status_code == 201
+    assert create_response.json()["source"] == "manual"
+    assert create_response.json()["tags"] == ["manual", "russia"]
+    assert writes[-1][0] == "manual/news/items.json"
+    created_id = create_response.json()["id"]
+
+    monkeypatch.setattr(
+        S3Storage,
+        "get_json",
+        lambda self, key: {**PUBLIC_ARTIFACTS["manual/news/items.json"], "items": writes[-1][1]["items"]}
+        if key == "manual/news/items.json"
+        else PUBLIC_ARTIFACTS[key],
+    )
+    delete_response = client.delete(
+        f"/v1/admin/news/{created_id}",
+        headers={"X-Admin-Token": "secret"},
+    )
+
+    assert delete_response.status_code == 204
+    assert writes[-1][1]["items"][0]["id"] == "manual-test"
 
 
 def test_api_access_log_is_structured_json(monkeypatch, caplog) -> None:

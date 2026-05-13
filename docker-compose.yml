@@ -80,6 +80,7 @@ services:
       S3_FORCE_PATH_STYLE: ${S3_FORCE_PATH_STYLE:-true}
       CORS_ALLOW_ORIGINS: ${CORS_ALLOW_ORIGINS:-*}
       LOG_LEVEL: ${LOG_LEVEL:-info}
+      NEWS_ADMIN_API_TOKEN: ${NEWS_ADMIN_API_TOKEN:-change-me-local-admin-token}
     ports:
       - "${NEWS_SERVICE_PORT:-8001}:8001"
     volumes:

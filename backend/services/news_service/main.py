@@ -1,10 +1,22 @@
-from fastapi import FastAPI, HTTPException, Query
+from datetime import UTC, datetime
+import re
+import secrets
+from typing import Annotated
+
+from fastapi import Depends, FastAPI, Header, HTTPException, Query, Response, status
 from fastapi.middleware.cors import CORSMiddleware
+from pydantic import Field, HttpUrl
 
 from shared.config import get_settings
-from shared.contracts import HealthResponse, NewsItem
+from shared.contracts import HealthResponse, NewsItem, SourceConfidence
+from shared.contracts.models import ProjectModel
+from shared.news_store import (
+    load_manual_news_items,
+    load_merged_news_items,
+    save_manual_news_items,
+)
 from shared.observability import configure_json_logging, install_access_log_middleware
-from shared.public_artifacts import latest_manifest_generated_at, read_json_artifact
+from shared.public_artifacts import latest_manifest_generated_at
 from shared.storage import S3Storage
 
 settings = get_settings()
@@ -15,9 +27,53 @@ install_access_log_middleware(app, settings)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.cors_origins,
-    allow_methods=["GET"],
+    allow_methods=["GET", "POST", "DELETE", "OPTIONS"],
     allow_headers=["*"],
 )
+
+
+class ManualNewsCreate(ProjectModel):
+    title: str = Field(min_length=3, max_length=180)
+    summary: str | None = Field(default=None, max_length=3000)
+    source_url: HttpUrl
+    published_at: datetime | None = None
+    tags: list[str] = Field(default_factory=list, max_length=12)
+    related_region_codes: list[str] = Field(default_factory=list, max_length=12)
+    language: str = Field(default="ru", min_length=2, max_length=8)
+
+
+def require_admin_access(
+    authorization: Annotated[str | None, Header()] = None,
+    x_admin_token: Annotated[str | None, Header()] = None,
+) -> None:
+    expected = settings.news_admin_api_token
+    if not expected:
+        raise HTTPException(status_code=503, detail="Admin news API token is not configured")
+
+    supplied = None
+    if authorization and authorization.lower().startswith("bearer "):
+        supplied = authorization[7:].strip()
+    elif x_admin_token:
+        supplied = x_admin_token.strip()
+
+    if supplied is None or not secrets.compare_digest(supplied, expected):
+        raise HTTPException(status_code=401, detail="Invalid admin token")
+
+
+def manual_news_id(title: str, now: datetime) -> str:
+    slug = re.sub(r"[^a-z0-9]+", "-", title.lower()).strip("-")
+    if not slug:
+        slug = "news"
+    return f"manual-{now.strftime('%Y%m%d%H%M%S')}-{slug[:48]}"
+
+
+def clean_tags(tags: list[str]) -> list[str]:
+    cleaned = []
+    for tag in tags:
+        value = tag.strip().lower()
+        if value and value not in cleaned:
+            cleaned.append(value)
+    return cleaned or ["manual"]
 
 
 @app.get("/health", response_model=HealthResponse)
@@ -38,28 +94,70 @@ def news_feed(
     tag: str | None = None,
     source: str | None = None,
 ) -> list[NewsItem]:
-    feed = read_json_artifact(S3Storage(settings), "public/news/latest/feed.json", {"items": []})
-    items = feed.get("items", [])
+    items = load_merged_news_items(S3Storage(settings))
     if tag is not None:
-        items = [item for item in items if tag in item.get("tags", [])]
+        items = [item for item in items if tag in item.tags]
     if source is not None:
-        items = [item for item in items if item.get("source") == source]
+        items = [item for item in items if item.source == source]
     return items[:limit]
 
 
 @app.get("/v1/news/tags", response_model=list[str])
 def news_tags() -> list[str]:
-    feed = read_json_artifact(S3Storage(settings), "public/news/latest/feed.json", {"items": []})
     tags: set[str] = set()
-    for item in feed.get("items", []):
-        tags.update(item.get("tags", []))
+    for item in load_merged_news_items(S3Storage(settings)):
+        tags.update(item.tags)
     return sorted(tags)
 
 
 @app.get("/v1/news/{news_id}", response_model=NewsItem)
 def news_item(news_id: str) -> NewsItem:
-    feed = read_json_artifact(S3Storage(settings), "public/news/latest/feed.json", {"items": []})
-    for item in feed.get("items", []):
-        if item.get("id") == news_id:
+    for item in load_merged_news_items(S3Storage(settings)):
+        if item.id == news_id:
             return item
     raise HTTPException(status_code=404, detail="News item not found")
+
+
+@app.get("/v1/admin/news", response_model=list[NewsItem])
+def admin_news(_: Annotated[None, Depends(require_admin_access)]) -> list[NewsItem]:
+    return load_manual_news_items(S3Storage(settings))
+
+
+@app.post("/v1/admin/news", response_model=NewsItem, status_code=status.HTTP_201_CREATED)
+def create_admin_news(
+    payload: ManualNewsCreate,
+    _: Annotated[None, Depends(require_admin_access)],
+) -> NewsItem:
+    storage = S3Storage(settings)
+    items = load_manual_news_items(storage)
+    now = datetime.now(UTC)
+    item = NewsItem(
+        id=manual_news_id(payload.title, now),
+        source="manual",
+        source_url=payload.source_url,
+        published_at=payload.published_at or now,
+        fetched_at=now,
+        title=payload.title.strip(),
+        summary=payload.summary.strip() if payload.summary else None,
+        tags=clean_tags(payload.tags),
+        related_region_codes=[code.strip().upper() for code in payload.related_region_codes if code.strip()],
+        related_outbreak_ids=[],
+        language=payload.language.strip().lower(),
+        confidence=SourceConfidence.SECONDARY_VERIFIED,
+    )
+    save_manual_news_items(storage, [item, *items])
+    return item
+
+
+@app.delete("/v1/admin/news/{news_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_admin_news(
+    news_id: str,
+    _: Annotated[None, Depends(require_admin_access)],
+) -> Response:
+    storage = S3Storage(settings)
+    items = load_manual_news_items(storage)
+    remaining = [item for item in items if item.id != news_id]
+    if len(remaining) == len(items):
+        raise HTTPException(status_code=404, detail="Manual news item not found")
+    save_manual_news_items(storage, remaining)
+    return Response(status_code=status.HTTP_204_NO_CONTENT)

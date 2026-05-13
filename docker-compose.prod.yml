@@ -17,6 +17,7 @@ services:
       ADMIN_DOMAIN: ${ADMIN_DOMAIN}
       ADMIN_BASIC_AUTH_USER: ${ADMIN_BASIC_AUTH_USER}
       ADMIN_BASIC_AUTH_HASH: ${ADMIN_BASIC_AUTH_HASH}
+      NEWS_ADMIN_API_TOKEN: ${NEWS_ADMIN_API_TOKEN}
     ports:
       - "80:80"
       - "443:443"
@@ -87,6 +88,7 @@ services:
       S3_FORCE_PATH_STYLE: ${S3_FORCE_PATH_STYLE}
       CORS_ALLOW_ORIGINS: ${CORS_ALLOW_ORIGINS}
       LOG_LEVEL: ${LOG_LEVEL}
+      NEWS_ADMIN_API_TOKEN: ${NEWS_ADMIN_API_TOKEN}
     depends_on:
       minio-init:
         condition: service_completed_successfully

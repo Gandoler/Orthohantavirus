@@ -18,6 +18,8 @@ Caddy reverse-proxy
   |-- /analytics/*      -> umami tracking/dashboard routes
   |
 admin domain + basic auth
+  |-- /admin            -> frontend admin console
+  |-- /api/news/*       -> news-service with injected admin token
   |-- /analytics/*      -> umami
   |-- /grafana/*        -> grafana
 
@@ -87,6 +89,7 @@ Expected:
 
 - public endpoints return 200;
 - admin endpoint returns 401 without credentials;
+- admin news console opens after basic auth;
 - Caddy has issued HTTPS certificates;
 - Grafana dashboard shows backend logs after health checks;
 - MinIO contains `manifests/latest.json` and public artifacts.
