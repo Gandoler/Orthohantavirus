@@ -105,6 +105,7 @@ Public HTTPS checks:
 - public `/countries/AT`: indexable HTML with `Dataset` schema;
 - public `/outbreaks/who-2026-don600`: indexable HTML with `SpecialAnnouncement` schema;
 - public `/robots.txt`: allows indexing.
+- public `/admin`: returns 404 so the admin UI is not exposed on the public domain.
 
 Blocked:
 
