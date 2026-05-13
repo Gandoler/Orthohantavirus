@@ -76,6 +76,13 @@ Do not expose admin tools on production domains until authentication and route p
 
 Status: done
 
+Latest update:
+
+- added `/admin` manual news console;
+- added token-protected admin news API;
+- configured admin-domain Caddy routing for `/admin` and `/api/news/*`;
+- manual news is stored separately from official ingestion artifacts and merged into the public feed.
+
 Implemented:
 
 - local observability profile with Umami, Postgres, Loki, Grafana, Alloy;
@@ -84,7 +91,7 @@ Implemented:
 - Alloy Docker discovery filtered to running containers in the `orthohantavirus` Compose project;
 - structured JSON access logs for API requests;
 - Grafana Loki datasource and backend logs dashboard provisioning;
-- production admin routes for `/analytics` and `/grafana` protected by Caddy basic auth.
+- production admin routes for `/admin`, `/api/news`, `/analytics`, and `/grafana` protected by Caddy basic auth plus backend token validation for admin news writes.
 
 Verification:
 
@@ -92,7 +99,7 @@ Verification:
 - `curl http://localhost:3000/`: returned 200 for Umami;
 - `curl http://localhost:3001/login`: returned 200 for Grafana;
 - Alloy/Loki logs after project/running-container filtering showed no new warn/error entries in the last 10 seconds;
-- `.venv/bin/python -m pytest backend/tests/test_service_endpoints.py -q`: 8 passed;
+- `.venv/bin/python -m pytest backend/tests/test_service_endpoints.py -q`: 10 passed;
 - local API log smoke produced a JSON `request_finished` record;
 - Grafana container sees the provisioned Loki datasource and backend logs dashboard files.
 

@@ -1,0 +1,297 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Orthohantavirus Repo Handbook</title>
+    <style>
+      :root {
+        color: #1f2723;
+        background: #f3f5f2;
+        font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      }
+      * { box-sizing: border-box; }
+      body { margin: 0; }
+      header {
+        border-bottom: 1px solid #d6ddd7;
+        background: #fff;
+        padding: 22px;
+      }
+      header h1 { margin: 0 0 8px; font-size: 28px; }
+      header p { margin: 0; color: #52605a; max-width: 880px; line-height: 1.5; }
+      main {
+        display: grid;
+        grid-template-columns: minmax(220px, 280px) minmax(0, 1fr);
+        min-height: calc(100vh - 108px);
+      }
+      nav {
+        position: sticky;
+        top: 0;
+        align-self: start;
+        height: 100vh;
+        overflow: auto;
+        border-right: 1px solid #d6ddd7;
+        background: #fbfcfb;
+        padding: 18px;
+      }
+      nav a {
+        display: block;
+        border-radius: 8px;
+        color: #26322c;
+        padding: 9px 10px;
+        text-decoration: none;
+        font-weight: 700;
+      }
+      nav a:hover { background: #edf1ee; }
+      .content {
+        display: grid;
+        gap: 18px;
+        padding: 22px;
+      }
+      section {
+        border: 1px solid #d7ddd8;
+        border-radius: 8px;
+        background: #fff;
+        padding: 18px;
+      }
+      h2 { margin: 0 0 12px; font-size: 22px; }
+      h3 { margin: 18px 0 8px; font-size: 16px; }
+      p, li { line-height: 1.55; }
+      code, pre {
+        font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      }
+      pre {
+        overflow: auto;
+        border: 1px solid #d8ded9;
+        border-radius: 8px;
+        background: #111827;
+        color: #eef2ff;
+        padding: 12px;
+      }
+      details {
+        border: 1px solid #d8ded9;
+        border-radius: 8px;
+        margin: 10px 0;
+        padding: 12px;
+      }
+      summary { cursor: pointer; font-weight: 800; }
+      .task {
+        display: flex;
+        gap: 10px;
+        align-items: flex-start;
+        border: 1px solid #d8ded9;
+        border-radius: 8px;
+        margin: 8px 0;
+        padding: 10px;
+      }
+      .task input { margin-top: 4px; }
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 12px;
+      }
+      .callout {
+        border-left: 4px solid #2f5f98;
+        background: #f7f9fb;
+        padding: 12px;
+      }
+      .danger { border-left-color: #bd3d37; background: #fff7f6; }
+      .success { border-left-color: #12624d; background: #f2faf6; }
+      button.copy {
+        border: 1px solid #cbd3cc;
+        border-radius: 8px;
+        background: #fff;
+        padding: 7px 10px;
+        font-weight: 800;
+      }
+      @media (max-width: 900px) {
+        main { grid-template-columns: 1fr; }
+        nav { position: static; height: auto; border-right: 0; border-bottom: 1px solid #d6ddd7; }
+        .grid { grid-template-columns: 1fr; }
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <h1>Orthohantavirus: интерактивный учебник по репе и управлению</h1>
+      <p>
+        Проходи главы сверху вниз. Галочки сохраняются в браузере. Команды можно запускать из корня репозитория,
+        если в главе не указана другая директория.
+      </p>
+    </header>
+    <main>
+      <nav>
+        <a href="#map">1. Карта системы</a>
+        <a href="#local">2. Локальный запуск</a>
+        <a href="#data">3. Данные и ingestion</a>
+        <a href="#frontend">4. Фронт</a>
+        <a href="#admin">5. Админка новостей</a>
+        <a href="#prod">6. Прод и деплой</a>
+        <a href="#ops">7. Эксплуатация</a>
+        <a href="#tests">8. Проверки</a>
+        <a href="#release">9. Релизный сценарий</a>
+      </nav>
+      <div class="content">
+        <section id="map">
+          <h2>1. Карта системы</h2>
+          <p>Проект состоит из публичного фронта, двух public API, ingestion job, MinIO/S3 и observability/admin слоя.</p>
+          <pre><code>frontend
+  -> /api/map  -> map-api       -> MinIO public artifacts
+  -> /api/news -> news-service  -> official feed + manual news
+
+data-ingestion -> CDC/ECDC/WHO -> raw/normalized/public artifacts
+
+admin domain -> Caddy basic auth -> /admin -> frontend
+                                  -> /api/news/v1/admin/* -> news-service</code></pre>
+          <div class="task"><input type="checkbox" data-task="map-1" /> <span>Я понимаю, что ручные новости хранятся отдельно от ingestion и не затираются.</span></div>
+          <div class="task"><input type="checkbox" data-task="map-2" /> <span>Я понимаю, что наружу должен смотреть только Caddy.</span></div>
+        </section>
+
+        <section id="local">
+          <h2>2. Локальный запуск</h2>
+          <button class="copy" data-copy="cp .env.example .env&#10;docker compose up --build">Скопировать команды</button>
+          <pre><code>cp .env.example .env
+docker compose up --build</code></pre>
+          <div class="grid">
+            <div class="callout">Frontend: <code>http://localhost:5173</code></div>
+            <div class="callout">Admin UI: <code>http://localhost:5173/admin</code></div>
+            <div class="callout">Map API: <code>http://localhost:8000</code></div>
+            <div class="callout">News API: <code>http://localhost:8001</code></div>
+          </div>
+          <details>
+            <summary>Самопроверка</summary>
+            <pre><code>curl -f http://localhost:8000/health
+curl -f http://localhost:8001/health</code></pre>
+          </details>
+        </section>
+
+        <section id="data">
+          <h2>3. Данные и ingestion</h2>
+          <p>Ingestion читает официальные источники, пишет raw snapshots, normalized JSONL и public artifacts.</p>
+          <pre><code>docker compose run --rm data-ingestion python -m services.data_ingestion run-all</code></pre>
+          <details>
+            <summary>Что должно появиться в MinIO</summary>
+            <ul>
+              <li><code>public/map/latest/regions.geojson</code></li>
+              <li><code>public/map/latest/outbreaks.geojson</code></li>
+              <li><code>public/news/latest/feed.json</code></li>
+              <li><code>manifests/latest.json</code></li>
+            </ul>
+          </details>
+          <div class="task"><input type="checkbox" data-task="data-1" /> <span>Я запустил ingestion и проверил summary endpoint.</span></div>
+        </section>
+
+        <section id="frontend">
+          <h2>4. Фронт</h2>
+          <p>Публичный экран должен работать как инструмент: новостная лента слева, карта справа, compact controls сверху.</p>
+          <pre><code>cd frontend
+pnpm install
+pnpm dev</code></pre>
+          <details>
+            <summary>Критерии качества интерфейса</summary>
+            <ul>
+              <li>нет декоративных hero-блоков;</li>
+              <li>нет пустой карты при отсутствии WebGL;</li>
+              <li>новости фильтруются по источнику и поиску;</li>
+              <li>текст не ломает кнопки и панели на мобильном viewport.</li>
+            </ul>
+          </details>
+        </section>
+
+        <section id="admin">
+          <h2>5. Админка новостей</h2>
+          <p>В production админка открывается на admin-домене. Caddy закрывает домен basic auth и прокидывает backend token.</p>
+          <pre><code>https://admin.&lt;domain&gt;/admin</code></pre>
+          <p>Локально введи <code>NEWS_ADMIN_API_TOKEN</code> из <code>.env</code> в поле токена на странице <code>/admin</code>.</p>
+          <details>
+            <summary>Что делает кнопка Publish news</summary>
+            <ul>
+              <li>создает запись в <code>manual/news/items.json</code>;</li>
+              <li>публичная лента сразу начинает отдавать official + manual;</li>
+              <li>следующий ingestion не удалит ручную запись.</li>
+            </ul>
+          </details>
+          <div class="task"><input type="checkbox" data-task="admin-1" /> <span>Я создал тестовую новость через /admin.</span></div>
+        </section>
+
+        <section id="prod">
+          <h2>6. Прод и деплой</h2>
+          <p>Продовый путь описан в runbook, но базовый сценарий такой:</p>
+          <pre><code>cd /opt/orthohantavirus/repo
+SKIP_GIT_PULL=1 ./infra/scripts/deploy.sh</code></pre>
+          <div class="callout danger">
+            DNS должен резолвиться до VPS, иначе Caddy не сможет получить HTTPS-сертификат.
+          </div>
+          <details>
+            <summary>DNS для текущего домена</summary>
+            <pre><code>ортхохантавирус.рф        A -> VPS IP
+admin.ортхохантавирус.рф  A -> VPS IP</code></pre>
+          </details>
+        </section>
+
+        <section id="ops">
+          <h2>7. Эксплуатация</h2>
+          <div class="grid">
+            <div>
+              <h3>Статус сервисов</h3>
+              <pre><code>docker compose --env-file .env -f docker-compose.prod.yml ps</code></pre>
+            </div>
+            <div>
+              <h3>Логи</h3>
+              <pre><code>docker compose --env-file .env -f docker-compose.prod.yml logs --tail=100 news-service</code></pre>
+            </div>
+            <div>
+              <h3>Backup MinIO</h3>
+              <pre><code>BACKUP_DIR=/opt/orthohantavirus/backups ./infra/scripts/backup-minio.sh</code></pre>
+            </div>
+            <div>
+              <h3>Свежесть данных</h3>
+              <pre><code>curl -f https://&lt;domain&gt;/api/map/health</code></pre>
+            </div>
+          </div>
+        </section>
+
+        <section id="tests">
+          <h2>8. Проверки</h2>
+          <pre><code>.venv/bin/python -m ruff check backend
+.venv/bin/python -m pytest backend/tests
+cd frontend && pnpm test && pnpm test:e2e && pnpm build
+docker compose config
+docker compose --env-file .env.prod.example -f docker-compose.prod.yml config</code></pre>
+          <div class="task"><input type="checkbox" data-task="tests-1" /> <span>Я прогнал backend tests.</span></div>
+          <div class="task"><input type="checkbox" data-task="tests-2" /> <span>Я прогнал frontend unit + e2e + build.</span></div>
+        </section>
+
+        <section id="release">
+          <h2>9. Релизный сценарий</h2>
+          <ol>
+            <li>Проверить <code>git status</code>, не коммитить <code>.env</code>.</li>
+            <li>Прогнать проверки из главы 8.</li>
+            <li>Сделать маленькие коммиты по смысловым блокам.</li>
+            <li>Синхронизировать сервер или сделать pull.</li>
+            <li>Запустить deploy script.</li>
+            <li>Проверить public endpoints и admin console.</li>
+          </ol>
+          <div class="callout success">Когда все пункты отмечены, релиз можно считать воспроизводимым.</div>
+        </section>
+      </div>
+    </main>
+    <script>
+      const checkboxes = document.querySelectorAll("input[type='checkbox'][data-task]");
+      for (const checkbox of checkboxes) {
+        const key = "ohv-handbook-" + checkbox.dataset.task;
+        checkbox.checked = localStorage.getItem(key) === "done";
+        checkbox.addEventListener("change", () => {
+          localStorage.setItem(key, checkbox.checked ? "done" : "");
+        });
+      }
+      for (const button of document.querySelectorAll("button.copy")) {
+        button.addEventListener("click", async () => {
+          await navigator.clipboard.writeText(button.dataset.copy || "");
+          button.textContent = "Скопировано";
+          setTimeout(() => (button.textContent = "Скопировать команды"), 1200);
+        });
+      }
+    </script>
+  </body>
+</html>

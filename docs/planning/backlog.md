@@ -76,3 +76,6 @@ Move items here when requirements and acceptance criteria are clear.
 | OHV-043 | Write production deployment and update playbook | 2026-05-13 | Added `docs/operations/production-deployment-playbook.md` |
 | OHV-036 | Verify real VPS production deploy | 2026-05-13 | VPS bootstrap, Docker stack deploy, manual ingestion, MinIO artifact check, and internal API/news smoke passed; public HTTPS waits on DNS |
 | OHV-040 | Add CI/CD pipeline for tests and Docker config validation | 2026-05-13 | Added GitHub Actions CI for backend tests/lint, frontend unit/e2e/build, Compose config, shell syntax, and Caddy validation |
+| OHV-048 | Redesign public frontend for credible monitoring UI | 2026-05-13 | Added role-based frontend plan, quieter dashboard styling, news filters, and WebGL fallback map |
+| OHV-049 | Add manual news admin console | 2026-05-13 | Added admin news API, S3-backed manual news store, admin UI, Caddy admin route, and tests |
+| OHV-050 | Add interactive repository and operations handbook | 2026-05-13 | Added `docs/handbook/index.html` with checklists, commands, and guided operations chapters |

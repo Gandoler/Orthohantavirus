@@ -210,7 +210,7 @@ Commands:
 
 ```bash
 docker compose --env-file .env.prod.example -f docker-compose.prod.yml config
-docker run --rm -e PUBLIC_DOMAIN=hanta.example.com -e ADMIN_DOMAIN=admin.hanta.example.com -e ADMIN_BASIC_AUTH_USER=admin -e 'ADMIN_BASIC_AUTH_HASH=...' -v "$PWD/infra/caddy/Caddyfile:/etc/caddy/Caddyfile:ro" caddy:2-alpine caddy validate --config /etc/caddy/Caddyfile
+docker run --rm -e PUBLIC_DOMAIN=hanta.example.com -e ADMIN_DOMAIN=admin.hanta.example.com -e ADMIN_BASIC_AUTH_USER=admin -e 'ADMIN_BASIC_AUTH_HASH=...' -e NEWS_ADMIN_API_TOKEN=ci-token -v "$PWD/infra/caddy/Caddyfile:/etc/caddy/Caddyfile:ro" caddy:2-alpine caddy validate --config /etc/caddy/Caddyfile
 docker run --rm -v "$PWD/frontend/Caddyfile:/etc/caddy/Caddyfile:ro" caddy:2-alpine caddy validate --config /etc/caddy/Caddyfile
 ```
 

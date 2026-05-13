@@ -26,6 +26,7 @@ See planning docs:
 - `docs/planning/status-log.md`
 - `docs/planning/test-plan.md`
 - `docs/operations/runbook.md`
+- `docs/handbook/index.html`
 
 ## Local Start
 

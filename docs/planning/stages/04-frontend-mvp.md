@@ -52,6 +52,13 @@ Build the first usable public experience: an interactive map with a left news pa
 
 Status: done
 
+Latest update:
+
+- redesigned the public UI as a monitoring workspace instead of a generated-looking marketing page;
+- added news search and source filtering;
+- added a compatibility map fallback for browsers without usable WebGL;
+- verified public workspace and admin flow in Chromium, Firefox, WebKit, and mobile Chromium.
+
 Implemented:
 
 - MapLibre map workspace with OSM raster base map;
@@ -60,12 +67,12 @@ Implemented:
 - source links, source labels, freshness, live/fallback data state;
 - optional Umami analytics events for source links, layer toggles, and region selection;
 - responsive layout CSS;
-- Playwright smoke test for desktop and mobile viewports.
+- Playwright smoke tests for Chromium, Firefox, WebKit, and mobile Chromium.
 
 Verification:
 
 - `pnpm test`: 5 passed;
-- `pnpm test:e2e`: 2 passed;
+- `pnpm test:e2e`: 8 passed;
 - `pnpm build`: passed;
 - `docker compose up --build -d frontend`: frontend container started;
 - `curl -I http://localhost:5173/`: returned `HTTP/1.1 200 OK`.

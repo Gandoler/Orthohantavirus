@@ -56,6 +56,32 @@ Verification:
 
 - equivalent local backend, frontend, Playwright, Compose, shell syntax, and Caddy validation commands passed.
 
+### Frontend Redesign And Admin Console
+
+Status: done
+
+Completed:
+
+- added role-based frontend redesign and admin plan in `docs/planning/frontend-redesign-and-admin-plan.md`;
+- redesigned the public frontend as a restrained monitoring workspace with news filters, compact metrics, layer controls, selected-region panel, and map legend;
+- added browser compatibility fallback for clients without usable WebGL;
+- added S3-backed manual news storage under `manual/news/items.json`;
+- updated public news feed to merge official ingestion news with manual admin news;
+- added admin endpoints for listing, creating, and deleting manual news;
+- added `/admin` frontend console for manual news publishing;
+- routed admin-domain `/admin` and `/api/news/*` through Caddy, with injected admin token for backend validation;
+- added an interactive repository and operations handbook at `docs/handbook/index.html`;
+- expanded Playwright coverage to Chromium, Firefox, WebKit, and mobile Chromium.
+
+Verification:
+
+- backend service endpoint tests: passed;
+- frontend unit tests: passed;
+- frontend production build: passed;
+- Playwright public/admin smoke across Chromium, Firefox, WebKit, and mobile Chromium: 8 passed.
+- production rebuild with redesigned frontend and admin routes: passed;
+- production news-service admin smoke: no-token request returned 401, token request returned 200, create/delete smoke wrote and removed a temporary manual item.
+
 ### Remaining Work Audit
 
 Status: done
