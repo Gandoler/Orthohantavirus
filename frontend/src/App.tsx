@@ -1,25 +1,36 @@
 import "maplibre-gl/dist/maplibre-gl.css";
 import {
   Activity,
+  AlertCircle,
   AlertTriangle,
   CheckCircle2,
   Compass,
   Database,
   ExternalLink,
+  Flame,
   Layers,
   ListFilter,
+  Loader2,
   Lock,
   MapPin,
+  Moon,
   Newspaper,
   Plus,
   RefreshCw,
   Save,
   Search,
+  Sun,
+  ThermometerSun,
   Trash2,
 } from "lucide-react";
-import maplibregl from "maplibre-gl";
-import type { GeoJSONSourceSpecification } from "maplibre-gl";
+import type {
+  GeoJSONSource,
+  GeoJSONSourceSpecification,
+  Map as MapLibreMap,
+  MapGeoJSONFeature,
+} from "maplibre-gl";
 import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import type { Dispatch, SetStateAction } from "react";
 import type { ReactNode } from "react";
 
 import { installAnalytics, trackEvent } from "./analytics";
@@ -30,29 +41,63 @@ import { sampleData } from "./sampleData";
 import "./styles.css";
 
 const ADMIN_TOKEN_STORAGE_KEY = "orthohantavirus-admin-token";
+const THEME_STORAGE_KEY = "orthohantavirus-theme";
+
+type DataState = "loading" | "live" | "fallback" | "error";
+type Theme = "light" | "dark";
+type LayerState = {
+  cases: boolean;
+  outbreaks: boolean;
+  heatmap: boolean;
+  news: boolean;
+};
+
+type MapLibreModule = typeof import("maplibre-gl");
 
 export function App() {
   const isAdminRoute = window.location.pathname.startsWith("/admin");
+  const [theme, setTheme] = useState<Theme>(() => loadInitialTheme());
 
   useEffect(() => {
     installAnalytics();
   }, []);
 
-  return isAdminRoute ? <AdminApp /> : <PublicMapApp />;
+  useEffect(() => {
+    document.documentElement.dataset.theme = theme;
+    localStorage.setItem(THEME_STORAGE_KEY, theme);
+  }, [theme]);
+
+  const toggleTheme = useCallback(() => {
+    setTheme((current) => (current === "light" ? "dark" : "light"));
+  }, []);
+
+  return isAdminRoute ? (
+    <AdminApp theme={theme} onToggleTheme={toggleTheme} />
+  ) : (
+    <PublicMapApp theme={theme} onToggleTheme={toggleTheme} />
+  );
 }
 
-function PublicMapApp() {
+function PublicMapApp({ theme, onToggleTheme }: { theme: Theme; onToggleTheme: () => void }) {
   const [data, setData] = useState<AppData>(sampleData);
   const [selectedRegion, setSelectedRegion] = useState<RegionFeature | null>(
     sampleData.regions.features[0] ?? null,
   );
-  const [dataState, setDataState] = useState<"loading" | "live" | "fallback">("loading");
-  const [visibleLayers, setVisibleLayers] = useState({ cases: true, outbreaks: true });
+  const [dataState, setDataState] = useState<DataState>("loading");
+  const [errorText, setErrorText] = useState("");
+  const [visibleLayers, setVisibleLayers] = useState<LayerState>({
+    cases: true,
+    outbreaks: true,
+    heatmap: true,
+    news: true,
+  });
   const [sourceFilter, setSourceFilter] = useState("all");
   const [query, setQuery] = useState("");
+  const [sidebarOpen, setSidebarOpen] = useState(true);
 
   const refreshData = useCallback(() => {
     setDataState("loading");
+    setErrorText("");
     loadAppData()
       .then((loaded) => {
         const hasData = loaded.regions.features.length > 0 || loaded.news.length > 0;
@@ -61,10 +106,11 @@ function PublicMapApp() {
         setSelectedRegion(nextData.regions.features[0] ?? null);
         setDataState(hasData ? "live" : "fallback");
       })
-      .catch(() => {
+      .catch((error: Error) => {
         setData(sampleData);
         setSelectedRegion(sampleData.regions.features[0] ?? null);
-        setDataState("fallback");
+        setErrorText(error.message);
+        setDataState("error");
       });
   }, []);
 
@@ -85,6 +131,10 @@ function PublicMapApp() {
     });
   }, [data.news, query, sourceFilter]);
 
+  const latestDate = data.summary.generated_at ?? data.regions.generated_at;
+  const hasRenderableMapData = data.regions.features.some((item) => item.geometry) ||
+    data.outbreaks.features.some((item) => item.geometry);
+
   const handleSelectRegion = useCallback((region: RegionFeature) => {
     setSelectedRegion(region);
     trackEvent("region_select", {
@@ -94,29 +144,47 @@ function PublicMapApp() {
   }, []);
 
   return (
-    <main className="app-shell">
-      <aside className="news-panel" aria-label="News feed">
+    <main className={sidebarOpen ? "monitor-shell" : "monitor-shell monitor-shell--sidebar-closed"}>
+      <aside className="monitor-sidebar" aria-label="News feed">
         <header className="brand-strip">
           <div>
             <p className="eyebrow">Orthohantavirus monitor</p>
             <h1>Cases, outbreaks, and verified updates</h1>
           </div>
-          <DataStatus state={dataState} />
+          <div className="brand-actions">
+            <DataStatus state={dataState} />
+            <ThemeButton theme={theme} onToggleTheme={onToggleTheme} />
+          </div>
         </header>
 
-        <section className="summary-grid" aria-label="Summary">
-          <Metric label="Reported cases" value={formatNumber(data.summary.reported_cases_total)} tone="red" />
-          <Metric label="Deaths" value={formatNumber(data.summary.reported_deaths_total)} tone="ink" />
-          <Metric label="Outbreak reports" value={formatNumber(data.summary.outbreak_events)} tone="amber" />
-          <Metric label="News items" value={formatNumber(data.summary.news_items)} tone="blue" />
+        <section className="trust-strip" aria-label="Data trust and freshness">
+          <span>
+            <CheckCircle2 size={15} aria-hidden="true" />
+            Official-source first
+          </span>
+          <span>
+            <Database size={15} aria-hidden="true" />
+            Updated {formatDate(latestDate)}
+          </span>
         </section>
+
+        {dataState === "loading" ? (
+          <MetricSkeleton />
+        ) : (
+          <section className="summary-grid" aria-label="Summary">
+            <Metric label="Reported cases" value={formatNumber(data.summary.reported_cases_total)} tone="red" />
+            <Metric label="Deaths" value={formatNumber(data.summary.reported_deaths_total)} tone="ink" />
+            <Metric label="Outbreak reports" value={formatNumber(data.summary.outbreak_events)} tone="amber" />
+            <Metric label="Verified updates" value={formatNumber(data.summary.news_items)} tone="blue" />
+          </section>
+        )}
 
         <section className="feed-controls" aria-label="News filters">
           <label className="search-control">
             <Search size={16} aria-hidden="true" />
             <input
               aria-label="Search news"
-              placeholder="Search news"
+              placeholder="Search verified updates"
               value={query}
               onChange={(event) => setQuery(event.target.value)}
             />
@@ -141,40 +209,58 @@ function PublicMapApp() {
         <section className="news-list" aria-label="Official news">
           <div className="section-title">
             <Newspaper size={17} aria-hidden="true" />
-            <h2>News feed</h2>
+            <h2>Verified updates</h2>
             <span>{formatNumber(filteredNews.length)}</span>
           </div>
-          {filteredNews.map((item) => (
-            <NewsCard item={item} key={item.id} />
-          ))}
-          {filteredNews.length === 0 ? <p className="empty-state">No news matched the current filters.</p> : null}
+          {dataState === "loading" ? (
+            <NewsSkeleton />
+          ) : (
+            filteredNews.map((item) => <NewsCard item={item} key={item.id} />)
+          )}
+          {dataState !== "loading" && filteredNews.length === 0 ? (
+            <p className="empty-state">No updates matched the current filters.</p>
+          ) : null}
         </section>
       </aside>
 
       <section className="map-workspace" aria-label="Map workspace">
         <div className="map-toolbar">
+          <button
+            className="icon-button sidebar-toggle"
+            type="button"
+            onClick={() => setSidebarOpen((current) => !current)}
+          >
+            <Layers size={17} aria-hidden="true" />
+            <span>{sidebarOpen ? "Hide feed" : "Show feed"}</span>
+          </button>
           <div className="toolbar-title">
-            <p className="eyebrow">Map layers</p>
-            <strong>{visibleLayers.cases ? "Reported case distribution" : "Outbreak report distribution"}</strong>
+            <p className="eyebrow">Surveillance map</p>
+            <strong>{mapTitle(visibleLayers)}</strong>
           </div>
           <div className="layer-toggles" aria-label="Map layers">
             <LayerButton
               active={visibleLayers.cases}
-              icon={<Layers size={16} aria-hidden="true" />}
+              icon={<ThermometerSun size={16} aria-hidden="true" />}
               label="Cases"
-              onClick={() => {
-                setVisibleLayers((current) => ({ ...current, cases: !current.cases }));
-                trackEvent("map_layer_toggle", { layer: "reported_cases" });
-              }}
+              onClick={() => toggleLayer("cases", setVisibleLayers)}
             />
             <LayerButton
               active={visibleLayers.outbreaks}
-              icon={<MapPin size={16} aria-hidden="true" />}
+              icon={<Flame size={16} aria-hidden="true" />}
               label="Outbreaks"
-              onClick={() => {
-                setVisibleLayers((current) => ({ ...current, outbreaks: !current.outbreaks }));
-                trackEvent("map_layer_toggle", { layer: "outbreak_reports" });
-              }}
+              onClick={() => toggleLayer("outbreaks", setVisibleLayers)}
+            />
+            <LayerButton
+              active={visibleLayers.heatmap}
+              icon={<Activity size={16} aria-hidden="true" />}
+              label="Heatmap"
+              onClick={() => toggleLayer("heatmap", setVisibleLayers)}
+            />
+            <LayerButton
+              active={visibleLayers.news}
+              icon={<Newspaper size={16} aria-hidden="true" />}
+              label="News"
+              onClick={() => toggleLayer("news", setVisibleLayers)}
             />
           </div>
           <button className="icon-button" type="button" onClick={refreshData} title="Refresh data">
@@ -184,25 +270,28 @@ function PublicMapApp() {
         </div>
 
         <div className="map-stage">
-          <HantaMap data={data} visibleLayers={visibleLayers} onSelectRegion={handleSelectRegion} />
-          <RegionPanel region={selectedRegion} generatedAt={data.regions.generated_at ?? data.summary.generated_at} />
-          <div className="map-legend" aria-label="Map legend">
-            <span>
-              <i className="legend-dot legend-dot--case" />
-              Reported cases
-            </span>
-            <span>
-              <i className="legend-dot legend-dot--outbreak" />
-              Outbreak report
-            </span>
-          </div>
+          <HantaMap
+            data={data}
+            dataState={dataState}
+            visibleLayers={visibleLayers}
+            onSelectRegion={handleSelectRegion}
+          />
+          <MapStatusOverlay state={dataState} errorText={errorText} hasRenderableData={hasRenderableMapData} />
+          <RegionPanel region={selectedRegion} generatedAt={latestDate} />
+          <MapLegend visibleLayers={visibleLayers} />
         </div>
       </section>
     </main>
   );
 }
 
-function AdminApp() {
+function AdminApp({
+  theme,
+  onToggleTheme,
+}: {
+  theme: Theme;
+  onToggleTheme: () => void;
+}) {
   const [token, setToken] = useState(() => sessionStorage.getItem(ADMIN_TOKEN_STORAGE_KEY) ?? "");
   const [items, setItems] = useState<NewsItem[]>([]);
   const [statusText, setStatusText] = useState("Admin feed not loaded yet.");
@@ -277,23 +366,26 @@ function AdminApp() {
           <p className="eyebrow">Admin console</p>
           <h1>Manual news publishing</h1>
         </div>
-        <div className="admin-auth">
-          <Lock size={16} aria-hidden="true" />
-          <input
-            aria-label="Admin API token"
-            placeholder="NEWS_ADMIN_API_TOKEN for local dev"
-            type="password"
-            value={token}
-            onChange={(event) => setToken(event.target.value)}
-          />
-          <button className="icon-button" type="button" onClick={saveToken}>
-            <Save size={16} aria-hidden="true" />
-            <span>Save</span>
-          </button>
-          <button className="icon-button" type="button" onClick={loadItems}>
-            <RefreshCw size={16} aria-hidden="true" />
-            <span>Reload</span>
-          </button>
+        <div className="admin-actions">
+          <ThemeButton theme={theme} onToggleTheme={onToggleTheme} />
+          <div className="admin-auth">
+            <Lock size={16} aria-hidden="true" />
+            <input
+              aria-label="Admin API token"
+              placeholder="NEWS_ADMIN_API_TOKEN for local dev"
+              type="password"
+              value={token}
+              onChange={(event) => setToken(event.target.value)}
+            />
+            <button className="icon-button" type="button" onClick={saveToken}>
+              <Save size={16} aria-hidden="true" />
+              <span>Save</span>
+            </button>
+            <button className="icon-button" type="button" onClick={loadItems}>
+              <RefreshCw size={16} aria-hidden="true" />
+              <span>Reload</span>
+            </button>
+          </div>
         </div>
       </header>
 
@@ -394,14 +486,29 @@ function AdminApp() {
   );
 }
 
-function DataStatus({ state }: { state: "loading" | "live" | "fallback" }) {
+function DataStatus({ state }: { state: DataState }) {
   const icon =
-    state === "live" ? <CheckCircle2 size={16} aria-hidden="true" /> : <Database size={16} aria-hidden="true" />;
+    state === "live" ? (
+      <CheckCircle2 size={16} aria-hidden="true" />
+    ) : state === "error" ? (
+      <AlertCircle size={16} aria-hidden="true" />
+    ) : (
+      <Database size={16} aria-hidden="true" />
+    );
   return (
     <div className={`data-pill data-pill--${state}`}>
       {icon}
-      <span>{state === "live" ? "Live API" : state === "loading" ? "Loading" : "Sample data"}</span>
+      <span>{state === "live" ? "Live API" : state === "loading" ? "Loading" : state === "error" ? "API fallback" : "Sample data"}</span>
     </div>
+  );
+}
+
+function ThemeButton({ theme, onToggleTheme }: { theme: Theme; onToggleTheme: () => void }) {
+  return (
+    <button className="icon-button theme-button" type="button" onClick={onToggleTheme}>
+      {theme === "dark" ? <Sun size={16} aria-hidden="true" /> : <Moon size={16} aria-hidden="true" />}
+      <span>{theme === "dark" ? "Light" : "Dark"}</span>
+    </button>
   );
 }
 
@@ -411,6 +518,34 @@ function Metric({ label, value, tone }: { label: string; value: string; tone: "r
       <span>{label}</span>
       <strong>{value}</strong>
     </div>
+  );
+}
+
+function MetricSkeleton() {
+  return (
+    <section className="summary-grid" aria-label="Summary loading">
+      {[0, 1, 2, 3].map((item) => (
+        <div className="metric metric--skeleton" key={item}>
+          <span className="skeleton-line skeleton-line--short" />
+          <strong className="skeleton-line skeleton-line--value" />
+        </div>
+      ))}
+    </section>
+  );
+}
+
+function NewsSkeleton() {
+  return (
+    <>
+      {[0, 1, 2].map((item) => (
+        <article className="news-card news-card--skeleton" key={item}>
+          <span className="skeleton-line skeleton-line--short" />
+          <span className="skeleton-line skeleton-line--title" />
+          <span className="skeleton-line" />
+          <span className="skeleton-line skeleton-line--half" />
+        </article>
+      ))}
+    </>
   );
 }
 
@@ -424,17 +559,15 @@ function NewsCard({ item }: { item: NewsItem }) {
       <h3>{item.title}</h3>
       {item.summary ? <p>{item.summary}</p> : null}
       <div className="tag-row">
-        {item.tags.slice(0, 4).map((tag) => (
+        {Array.from(new Set(item.tags)).slice(0, 4).map((tag) => (
           <span key={tag}>{tag}</span>
         ))}
       </div>
       <a
-        href={item.source_url}
-        target="_blank"
-        rel="noreferrer"
+        href={`/news/${encodeURIComponent(item.id)}`}
         onClick={() => trackEvent("source_link_open", { source: item.source, news_id: item.id })}
       >
-        Source <ExternalLink size={14} aria-hidden="true" />
+        Read update <ExternalLink size={14} aria-hidden="true" />
       </a>
     </article>
   );
@@ -461,15 +594,18 @@ function LayerButton({
 
 function HantaMap({
   data,
+  dataState,
   visibleLayers,
   onSelectRegion,
 }: {
   data: AppData;
-  visibleLayers: { cases: boolean; outbreaks: boolean };
+  dataState: DataState;
+  visibleLayers: LayerState;
   onSelectRegion: (region: RegionFeature) => void;
 }) {
   const containerRef = useRef<HTMLDivElement | null>(null);
-  const mapRef = useRef<maplibregl.Map | null>(null);
+  const mapRef = useRef<MapLibreMap | null>(null);
+  const mapModuleRef = useRef<MapLibreModule | null>(null);
   const dataRef = useRef(data);
   const onSelectRegionRef = useRef(onSelectRegion);
   const visibleLayersRef = useRef(visibleLayers);
@@ -484,144 +620,86 @@ function HantaMap({
   useEffect(() => {
     if (!containerRef.current || mapRef.current || fallbackReason) return;
 
-    if (!webGlAvailable()) {
-      setFallbackReason("WebGL is unavailable in this browser. Showing the compatibility map.");
-      return;
-    }
+    let disposed = false;
+    const cancelBoot = scheduleMapBoot(() => {
+      import("maplibre-gl").then((module) => {
+        if (disposed || !containerRef.current || mapRef.current) return;
+        mapModuleRef.current = module;
+        const maplibregl = module;
 
-    let map: maplibregl.Map;
-    try {
-      map = new maplibregl.Map({
-        container: containerRef.current,
-        style: {
-          version: 8,
-          sources: {
-            osm: {
-              type: "raster",
-              tiles: ["https://tile.openstreetmap.org/{z}/{x}/{y}.png"],
-              tileSize: 256,
-              attribution: "OpenStreetMap contributors",
+        if (!webGlAvailable()) {
+          setFallbackReason("WebGL is unavailable in this browser. Showing the compatibility map.");
+          return;
+        }
+
+        let map: MapLibreMap;
+        try {
+          map = new maplibregl.Map({
+            container: containerRef.current,
+            style: {
+              version: 8,
+              glyphs: "https://demotiles.maplibre.org/font/{fontstack}/{range}.pbf",
+              sources: {
+                osm: {
+                  type: "raster",
+                  tiles: ["https://tile.openstreetmap.org/{z}/{x}/{y}.png"],
+                  tileSize: 256,
+                  attribution: "OpenStreetMap contributors",
+                },
+              },
+              layers: [{ id: "osm", type: "raster", source: "osm" }],
             },
-          },
-          layers: [{ id: "osm", type: "raster", source: "osm" }],
-        },
-        center: [8, 43],
-        zoom: 1.65,
-        minZoom: 1,
-      });
-    } catch {
-      setFallbackReason("The interactive map could not start. Showing the compatibility map.");
-      return;
-    }
+            center: [8, 43],
+            zoom: 1.55,
+            minZoom: 1,
+            attributionControl: {},
+          });
+        } catch {
+          setFallbackReason("The interactive map could not start. Showing the compatibility map.");
+          return;
+        }
 
-    map.addControl(new maplibregl.NavigationControl({ visualizePitch: false }), "top-right");
-
-    map.on("load", () => {
-      map.addSource("regions", { type: "geojson", data: renderableRegions(dataRef.current.regions) });
-      map.addSource("outbreaks", { type: "geojson", data: renderableOutbreaks(dataRef.current.outbreaks) });
-      map.addLayer({
-        id: "region-cases",
-        type: "circle",
-        source: "regions",
-        layout: { visibility: visibleLayersRef.current.cases ? "visible" : "none" },
-        paint: {
-          "circle-color": [
-            "interpolate",
-            ["linear"],
-            ["coalesce", ["get", "confirmed_cases"], 0],
-            0,
-            "#2f5f98",
-            100,
-            "#b66a1c",
-            800,
-            "#bd3d37",
-          ],
-          "circle-radius": [
-            "interpolate",
-            ["linear"],
-            ["coalesce", ["get", "confirmed_cases"], 0],
-            0,
-            6,
-            100,
-            13,
-            900,
-            25,
-          ],
-          "circle-opacity": 0.8,
-          "circle-stroke-color": "#ffffff",
-          "circle-stroke-width": 1.5,
-        },
-      });
-      map.addLayer({
-        id: "outbreak-points",
-        type: "circle",
-        source: "outbreaks",
-        layout: { visibility: visibleLayersRef.current.outbreaks ? "visible" : "none" },
-        paint: {
-          "circle-color": "#111827",
-          "circle-radius": 8,
-          "circle-opacity": 0.88,
-          "circle-stroke-color": "#f2b84b",
-          "circle-stroke-width": 2,
-        },
-      });
-
-      map.on("click", "region-cases", (event) => {
-        const featureId = event.features?.[0]?.id;
-        const region = dataRef.current.regions.features.find((item) => item.id === featureId);
-        if (region) onSelectRegionRef.current(region);
-      });
-
-      map.on("click", "outbreak-points", (event) => {
-        const feature = event.features?.[0];
-        const coordinates = feature?.geometry?.type === "Point" ? feature.geometry.coordinates.slice() : null;
-        if (!feature || !coordinates) return;
-        new maplibregl.Popup()
-          .setLngLat(coordinates as [number, number])
-          .setHTML(
-            `<strong>${escapeHtml(feature.properties?.title ?? "Outbreak report")}</strong><br/><span>${escapeHtml(
-              feature.properties?.source ?? "source",
-            )}</span>`,
-          )
-          .addTo(map);
-      });
-
-      for (const layer of ["region-cases", "outbreak-points"]) {
-        map.on("mouseenter", layer, () => {
-          map.getCanvas().style.cursor = "pointer";
+        map.addControl(new maplibregl.NavigationControl({ visualizePitch: false }), "top-right");
+        map.on("load", () => {
+          installMapLayers(
+            map,
+            maplibregl,
+            () => dataRef.current,
+            visibleLayersRef.current,
+            (region) => onSelectRegionRef.current(region),
+          );
+          fitMapToData(map, maplibregl, dataRef.current);
         });
-        map.on("mouseleave", layer, () => {
-          map.getCanvas().style.cursor = "";
-        });
-      }
+        mapRef.current = map;
+      })
+        .catch(() => setFallbackReason("The map library could not load. Showing the compatibility map."));
     });
 
-    mapRef.current = map;
     return () => {
-      map.remove();
+      disposed = true;
+      cancelBoot();
+      mapRef.current?.remove();
       mapRef.current = null;
     };
   }, [fallbackReason]);
 
   useEffect(() => {
-    const source = mapRef.current?.getSource("regions") as maplibregl.GeoJSONSource | undefined;
-    source?.setData(renderableRegions(data.regions));
-  }, [data.regions]);
-
-  useEffect(() => {
-    const source = mapRef.current?.getSource("outbreaks") as maplibregl.GeoJSONSource | undefined;
-    source?.setData(renderableOutbreaks(data.outbreaks));
-  }, [data.outbreaks]);
+    const map = mapRef.current;
+    if (!map || !map.getSource("regions")) return;
+    (map.getSource("regions") as GeoJSONSource).setData(renderableRegions(data.regions));
+    (map.getSource("outbreaks") as GeoJSONSource).setData(renderableOutbreaks(data.outbreaks));
+    (map.getSource("news-events") as GeoJSONSource).setData(buildNewsGeoJson(data));
+  }, [data]);
 
   useEffect(() => {
     const map = mapRef.current;
     if (!map) return;
-    if (map.getLayer("region-cases")) {
-      map.setLayoutProperty("region-cases", "visibility", visibleLayers.cases ? "visible" : "none");
-    }
-    if (map.getLayer("outbreak-points")) {
-      map.setLayoutProperty("outbreak-points", "visibility", visibleLayers.outbreaks ? "visible" : "none");
-    }
+    setLayerVisibility(map, "case-heatmap", visibleLayers.heatmap);
+    setLayerVisibility(map, "case-clusters", visibleLayers.cases);
+    setLayerVisibility(map, "case-cluster-count", visibleLayers.cases);
+    setLayerVisibility(map, "region-cases", visibleLayers.cases);
+    setLayerVisibility(map, "outbreak-points", visibleLayers.outbreaks);
+    setLayerVisibility(map, "news-points", visibleLayers.news);
   }, [visibleLayers]);
 
   if (fallbackReason) {
@@ -635,7 +713,275 @@ function HantaMap({
     );
   }
 
-  return <div className="map-container" ref={containerRef} />;
+  return (
+    <div className="map-container-shell">
+      {dataState === "loading" ? (
+        <div className="map-loading" aria-label="Map loading">
+          <Loader2 size={24} aria-hidden="true" />
+        </div>
+      ) : null}
+      <div className="map-container" ref={containerRef} />
+    </div>
+  );
+}
+
+function installMapLayers(
+  map: MapLibreMap,
+  maplibregl: MapLibreModule,
+  getData: () => AppData,
+  visibleLayers: LayerState,
+  onSelectRegion: (region: RegionFeature) => void,
+) {
+  const data = getData();
+  map.addSource("regions", {
+    type: "geojson",
+    data: renderableRegions(data.regions),
+    cluster: true,
+    clusterMaxZoom: 5,
+    clusterRadius: 42,
+  });
+  map.addSource("outbreaks", {
+    type: "geojson",
+    data: renderableOutbreaks(data.outbreaks),
+  });
+  map.addSource("news-events", {
+    type: "geojson",
+    data: buildNewsGeoJson(data),
+  });
+
+  map.addLayer({
+    id: "case-heatmap",
+    type: "heatmap",
+    source: "regions",
+    maxzoom: 6,
+    layout: { visibility: visibleLayers.heatmap ? "visible" : "none" },
+    paint: {
+      "heatmap-weight": ["interpolate", ["linear"], ["coalesce", ["get", "confirmed_cases"], 0], 0, 0, 900, 1],
+      "heatmap-intensity": ["interpolate", ["linear"], ["zoom"], 0, 0.35, 5, 1.1],
+      "heatmap-color": [
+        "interpolate",
+        ["linear"],
+        ["heatmap-density"],
+        0,
+        "rgba(47, 95, 152, 0)",
+        0.35,
+        "rgba(66, 153, 225, 0.36)",
+        0.7,
+        "rgba(245, 158, 11, 0.46)",
+        1,
+        "rgba(189, 61, 55, 0.62)",
+      ],
+      "heatmap-radius": ["interpolate", ["linear"], ["zoom"], 0, 18, 5, 38],
+      "heatmap-opacity": 0.78,
+    },
+  });
+
+  map.addLayer({
+    id: "case-clusters",
+    type: "circle",
+    source: "regions",
+    filter: ["has", "point_count"],
+    layout: { visibility: visibleLayers.cases ? "visible" : "none" },
+    paint: {
+      "circle-color": ["step", ["get", "point_count"], "#2f5f98", 6, "#b66a1c", 18, "#bd3d37"],
+      "circle-radius": ["step", ["get", "point_count"], 16, 6, 22, 18, 30],
+      "circle-opacity": 0.86,
+      "circle-stroke-color": "#ffffff",
+      "circle-stroke-width": 2,
+    },
+  });
+  map.addLayer({
+    id: "case-cluster-count",
+    type: "symbol",
+    source: "regions",
+    filter: ["has", "point_count"],
+    layout: {
+      visibility: visibleLayers.cases ? "visible" : "none",
+      "text-field": ["get", "point_count_abbreviated"],
+      "text-size": 12,
+      "text-font": ["Open Sans Semibold"],
+    },
+    paint: {
+      "text-color": "#ffffff",
+    },
+  });
+  map.addLayer({
+    id: "region-cases",
+    type: "circle",
+    source: "regions",
+    filter: ["!", ["has", "point_count"]],
+    layout: { visibility: visibleLayers.cases ? "visible" : "none" },
+    paint: {
+      "circle-color": [
+        "interpolate",
+        ["linear"],
+        ["coalesce", ["get", "confirmed_cases"], 0],
+        0,
+        "#2f5f98",
+        100,
+        "#b66a1c",
+        800,
+        "#bd3d37",
+      ],
+      "circle-radius": [
+        "interpolate",
+        ["linear"],
+        ["coalesce", ["get", "confirmed_cases"], 0],
+        0,
+        6,
+        100,
+        13,
+        900,
+        25,
+      ],
+      "circle-opacity": 0.88,
+      "circle-stroke-color": "#ffffff",
+      "circle-stroke-width": 1.6,
+    },
+  });
+  map.addLayer({
+    id: "outbreak-points",
+    type: "circle",
+    source: "outbreaks",
+    layout: { visibility: visibleLayers.outbreaks ? "visible" : "none" },
+    paint: {
+      "circle-color": "#111827",
+      "circle-radius": 8,
+      "circle-opacity": 0.9,
+      "circle-stroke-color": "#f59e0b",
+      "circle-stroke-width": 2.4,
+    },
+  });
+  map.addLayer({
+    id: "news-points",
+    type: "circle",
+    source: "news-events",
+    layout: { visibility: visibleLayers.news ? "visible" : "none" },
+    paint: {
+      "circle-color": "#0891b2",
+      "circle-radius": 7,
+      "circle-opacity": 0.82,
+      "circle-stroke-color": "#ffffff",
+      "circle-stroke-width": 1.6,
+    },
+  });
+
+  map.on("click", "case-clusters", (event) => {
+    if (!event.lngLat) return;
+    map.easeTo({ center: event.lngLat, zoom: Math.min(map.getZoom() + 2, 7), duration: 450 });
+  });
+  map.on("click", "region-cases", (event) => {
+    const featureId = event.features?.[0]?.id;
+    const region = getData().regions.features.find((item) => item.id === featureId);
+    if (region) onSelectRegion(region);
+  });
+  map.on("click", "outbreak-points", (event) => showPopup(map, maplibregl, event.features?.[0]));
+  map.on("click", "news-points", (event) => showPopup(map, maplibregl, event.features?.[0]));
+
+  for (const layer of ["case-clusters", "region-cases", "outbreak-points", "news-points"]) {
+    map.on("mouseenter", layer, () => {
+      map.getCanvas().style.cursor = "pointer";
+    });
+    map.on("mouseleave", layer, () => {
+      map.getCanvas().style.cursor = "";
+    });
+  }
+}
+
+function showPopup(map: MapLibreMap, maplibregl: MapLibreModule, feature: MapGeoJSONFeature | undefined) {
+  const coordinates = feature?.geometry?.type === "Point" ? feature.geometry.coordinates.slice() : null;
+  if (!feature || !coordinates) return;
+  const title = String(feature.properties?.title ?? feature.properties?.label ?? "Map item");
+  const source = String(feature.properties?.source ?? feature.properties?.sources ?? "source");
+  new maplibregl.Popup({ closeButton: true, maxWidth: "320px" })
+    .setLngLat(coordinates as [number, number])
+    .setHTML(`<strong>${escapeHtml(title)}</strong><br/><span>${escapeHtml(source)}</span>`)
+    .addTo(map);
+}
+
+function setLayerVisibility(map: MapLibreMap, layerId: string, visible: boolean) {
+  if (map.getLayer(layerId)) {
+    map.setLayoutProperty(layerId, "visibility", visible ? "visible" : "none");
+  }
+}
+
+function fitMapToData(map: MapLibreMap, maplibregl: MapLibreModule, data: AppData) {
+  const coords = [
+    ...data.regions.features.flatMap((item) => (item.geometry ? [item.geometry.coordinates] : [])),
+    ...data.outbreaks.features.flatMap((item) => (item.geometry ? [item.geometry.coordinates] : [])),
+  ];
+  if (!coords.length) return;
+  const bounds = coords.reduce(
+    (current, coord) => current.extend(coord),
+    new maplibregl.LngLatBounds(coords[0], coords[0]),
+  );
+  map.fitBounds(bounds, { padding: 70, maxZoom: 4.8, duration: 0 });
+}
+
+function renderableRegions(regions: AppData["regions"]): GeoJSONSourceSpecification["data"] {
+  return {
+    ...regions,
+    features: regions.features.filter((feature) => feature.geometry !== null),
+  } as GeoJSONSourceSpecification["data"];
+}
+
+function renderableOutbreaks(outbreaks: AppData["outbreaks"]): GeoJSONSourceSpecification["data"] {
+  return {
+    ...outbreaks,
+    features: outbreaks.features.filter((feature) => feature.geometry !== null),
+  } as GeoJSONSourceSpecification["data"];
+}
+
+function buildNewsGeoJson(data: AppData): GeoJSONSourceSpecification["data"] {
+  const regionByCode = new Map(data.regions.features.map((feature) => [feature.properties.region_code, feature]));
+  return {
+    type: "FeatureCollection",
+    features: data.news.flatMap((item) => {
+      const region = item.related_region_codes.map((code) => regionByCode.get(code)).find((feature) => feature?.geometry);
+      if (!region?.geometry) return [];
+      return [
+        {
+          type: "Feature",
+          id: item.id,
+          geometry: region.geometry,
+          properties: {
+            title: item.title,
+            source: item.source,
+            data_type: "news_update",
+          },
+        },
+      ];
+    }),
+  } as GeoJSONSourceSpecification["data"];
+}
+
+function webGlAvailable(): boolean {
+  try {
+    const canvas = document.createElement("canvas");
+    return Boolean(canvas.getContext("webgl") ?? canvas.getContext("experimental-webgl"));
+  } catch {
+    return false;
+  }
+}
+
+function scheduleMapBoot(callback: () => void): () => void {
+  if ("requestIdleCallback" in window) {
+    const idleId = window.requestIdleCallback(callback, { timeout: 1200 });
+    return () => window.cancelIdleCallback(idleId);
+  }
+  const timerId = globalThis.setTimeout(callback, 300);
+  return () => globalThis.clearTimeout(timerId);
+}
+
+function projectLonLat([lon, lat]: [number, number]): { x: number; y: number } {
+  return {
+    x: ((lon + 180) / 360) * 100,
+    y: ((90 - lat) / 180) * 100,
+  };
+}
+
+function escapeHtml(value: string): string {
+  return value.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 }
 
 function FallbackMap({
@@ -646,7 +992,7 @@ function FallbackMap({
 }: {
   data: AppData;
   reason: string;
-  visibleLayers: { cases: boolean; outbreaks: boolean };
+  visibleLayers: LayerState;
   onSelectRegion: (region: RegionFeature) => void;
 }) {
   return (
@@ -700,38 +1046,71 @@ function FallbackMap({
   );
 }
 
-function renderableRegions(regions: AppData["regions"]): GeoJSONSourceSpecification["data"] {
-  return {
-    ...regions,
-    features: regions.features.filter((feature) => feature.geometry !== null),
-  } as GeoJSONSourceSpecification["data"];
-}
-
-function renderableOutbreaks(outbreaks: AppData["outbreaks"]): GeoJSONSourceSpecification["data"] {
-  return {
-    ...outbreaks,
-    features: outbreaks.features.filter((feature) => feature.geometry !== null),
-  } as GeoJSONSourceSpecification["data"];
-}
-
-function webGlAvailable(): boolean {
-  try {
-    const canvas = document.createElement("canvas");
-    return Boolean(canvas.getContext("webgl") ?? canvas.getContext("experimental-webgl"));
-  } catch {
-    return false;
+function MapStatusOverlay({
+  state,
+  errorText,
+  hasRenderableData,
+}: {
+  state: DataState;
+  errorText: string;
+  hasRenderableData: boolean;
+}) {
+  if (state === "loading") {
+    return (
+      <div className="map-status map-status--loading">
+        <Loader2 size={18} aria-hidden="true" />
+        Loading surveillance layers
+      </div>
+    );
   }
+  if (state === "error") {
+    return (
+      <div className="map-status map-status--error">
+        <AlertCircle size={18} aria-hidden="true" />
+        API unavailable. Showing sample data. {errorText ? `(${errorText})` : ""}
+      </div>
+    );
+  }
+  if (!hasRenderableData) {
+    return (
+      <div className="map-status">
+        <AlertTriangle size={18} aria-hidden="true" />
+        No geocoded points are available for the current dataset.
+      </div>
+    );
+  }
+  return null;
 }
 
-function projectLonLat([lon, lat]: [number, number]): { x: number; y: number } {
-  return {
-    x: ((lon + 180) / 360) * 100,
-    y: ((90 - lat) / 180) * 100,
-  };
-}
-
-function escapeHtml(value: string): string {
-  return value.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+function MapLegend({ visibleLayers }: { visibleLayers: LayerState }) {
+  return (
+    <div className="map-legend" aria-label="Map legend">
+      {visibleLayers.cases ? (
+        <span>
+          <i className="legend-dot legend-dot--case" />
+          Reported cases
+        </span>
+      ) : null}
+      {visibleLayers.heatmap ? (
+        <span>
+          <i className="legend-dot legend-dot--heatmap" />
+          Case heatmap
+        </span>
+      ) : null}
+      {visibleLayers.outbreaks ? (
+        <span>
+          <i className="legend-dot legend-dot--outbreak" />
+          Outbreak report
+        </span>
+      ) : null}
+      {visibleLayers.news ? (
+        <span>
+          <i className="legend-dot legend-dot--news" />
+          News-linked region
+        </span>
+      ) : null}
+    </div>
+  );
 }
 
 function RegionPanel({
@@ -773,6 +1152,26 @@ function RegionPanel({
       </p>
     </aside>
   );
+}
+
+function toggleLayer(layer: keyof LayerState, setVisibleLayers: Dispatch<SetStateAction<LayerState>>) {
+  setVisibleLayers((current) => ({ ...current, [layer]: !current[layer] }));
+  trackEvent("map_layer_toggle", { layer });
+}
+
+function mapTitle(visibleLayers: LayerState): string {
+  const active = Object.entries(visibleLayers)
+    .filter(([, visible]) => visible)
+    .map(([layer]) => layer);
+  if (!active.length) return "All surveillance layers hidden";
+  return active.map((layer) => layer[0].toUpperCase() + layer.slice(1)).join(", ");
+}
+
+function loadInitialTheme(): Theme {
+  if (typeof localStorage === "undefined") return "light";
+  const stored = localStorage.getItem(THEME_STORAGE_KEY);
+  if (stored === "light" || stored === "dark") return stored;
+  return window.matchMedia?.("(prefers-color-scheme: dark)").matches ? "dark" : "light";
 }
 
 function splitList(value: string): string[] {

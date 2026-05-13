@@ -70,7 +70,7 @@ const news = [
     title: "Hantavirus outbreak update",
     summary: "Official outbreak update used by the browser smoke test.",
     tags: ["official", "hantavirus"],
-    related_region_codes: [],
+    related_region_codes: ["US-AZ"],
     related_outbreak_ids: ["who-test"],
     language: "en",
     confidence: "official",
@@ -141,6 +141,10 @@ test("renders the map workspace and news feed", async ({ page }) => {
   await expect(page.getByLabel("News feed")).toContainText("Hantavirus outbreak update");
   await expect(page.getByLabel("Selected region")).toContainText("Arizona");
   await expect(page.locator(".map-container canvas, .fallback-map")).toBeVisible();
+  await expect(page.getByRole("button", { name: "Cases" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Outbreaks" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Heatmap" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "News" })).toBeVisible();
 
   const newsPanelBox = await page.getByLabel("News feed").boundingBox();
   expect(newsPanelBox?.width).toBeGreaterThan(240);
@@ -148,6 +152,34 @@ test("renders the map workspace and news feed", async ({ page }) => {
   if (viewport && viewport.width >= 900) {
     expect(newsPanelBox?.x).toBeLessThan(5);
   }
+});
+
+test("supports dark mode, layer toggles, and map gestures", async ({ page }) => {
+  await page.addInitScript(() => localStorage.setItem("orthohantavirus-theme", "light"));
+  await page.goto("/");
+
+  await page.getByRole("button", { name: "Dark" }).click();
+  await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
+
+  await page.getByRole("button", { name: "Heatmap" }).click();
+  await page.getByRole("button", { name: "News" }).click();
+  await expect(page.locator(".toolbar-title strong")).toHaveText("Cases, Outbreaks");
+
+  const map = page.locator(".map-container canvas, .fallback-map").first();
+  await expect(map).toBeVisible();
+  const box = await map.boundingBox();
+  expect(box?.width).toBeGreaterThan(260);
+  expect(box?.height).toBeGreaterThan(260);
+
+  if (box) {
+    await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+    await page.mouse.wheel(0, -500);
+    await page.mouse.down();
+    await page.mouse.move(box.x + box.width / 2 + 70, box.y + box.height / 2 + 30);
+    await page.mouse.up();
+  }
+
+  await expect(page.locator(".map-container canvas, .fallback-map")).toBeVisible();
 });
 
 test("creates a manual news item from the admin console", async ({ page }) => {
