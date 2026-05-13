@@ -4,9 +4,48 @@ Use this file for chronological progress notes. Keep it concise and factual.
 
 ## 2026-05-13
 
+### Production Frontend Redesign And SEO Pass
+
+Status: done
+
+Completed:
+
+- added `docs/planning/frontend-production-redesign-epic.md` with Product Owner, design, frontend, performance, SEO, QA, and rollout responsibilities;
+- rebuilt the public monitor shell around compact metrics, source/search filters, layer toolbar, selected-region panel, legend, loading states, API fallback, and dark mode;
+- moved MapLibre loading to a lazy chunk and switched map rendering to GeoJSON sources, clustering, heatmap, and visibility toggles;
+- added a browser compatibility fallback map for clients without usable WebGL;
+- added semantic homepage source HTML, meta tags, canonical URL, Open Graph, Twitter Card, and schema.org WebSite metadata;
+- added static `/about/`, `/methodology/`, `/data-sources/`, `robots.txt`, and fallback `sitemap.xml`;
+- added backend HTML pages for `/news/{id}`, `/countries/{region_code}`, `/outbreaks/{id}`, and a dynamic `/sitemap.xml`;
+- updated production Caddy routes for indexable pages and allowed MapLibre glyph fetches in CSP;
+- expanded browser smoke coverage for theme toggling, layer controls, and map gestures;
+- added screenshot capture tooling and saved desktop/mobile light/dark screenshots;
+- optimized MapLibre startup with `requestIdleCallback`, improving Lighthouse Performance from 38 to 95 on production preview;
+- deployed the updated stack to the VPS and verified internal plus public SEO/health smoke checks.
+
+Verification:
+
+- backend compile: passed;
+- backend ruff: passed;
+- backend pytest: 22 passed, 5 PyMuPDF/SWIG deprecation warnings;
+- frontend unit tests: 5 passed;
+- frontend production build: passed;
+- Playwright browser matrix: 12 passed across Chromium, Firefox, WebKit, and mobile Chromium;
+- screenshot console capture: no browser console errors;
+- Lighthouse on production preview: Performance 95, Accessibility 96, Best Practices 100, SEO 100;
+- Docker Compose config validation: passed for local, observability, and production configs;
+- Caddy config validation: passed for production reverse proxy and frontend static Caddy;
+- production Docker build for frontend, map-api, and news-service: passed;
+- VPS internal smoke: map-api health/sitemap/country/outbreak, news-service health/news page, and frontend robots all returned 200;
+- public HTTPS smoke: homepage, map/news health, dynamic sitemap, news, country, outbreak, robots, and CSP checks passed for `https://xn--80aagyweapgkddrtb.xn--p1ai`.
+
+Blocked:
+
+- admin-domain HTTPS smoke is still blocked until `admin.xn--80aagyweapgkddrtb.xn--p1ai` points to the VPS.
+
 ### VPS Production Bootstrap
 
-Status: blocked
+Status: partially unblocked
 
 Completed:
 
@@ -34,13 +73,13 @@ Verification:
 
 Blocked:
 
-- public DNS for the production and admin domains is still NXDOMAIN, so Caddy cannot complete ACME validation and public HTTPS smoke checks are blocked.
+- production DNS now resolves and public HTTPS smoke checks pass;
+- admin DNS is still NXDOMAIN, so admin HTTPS smoke checks are blocked.
 
 Next:
 
-- add DNS A records for the production and admin domains to the VPS IP;
-- rerun `SKIP_GIT_PULL=1 ./infra/scripts/deploy.sh`;
-- run public HTTPS smoke checks for frontend, map API, news API, admin auth, Umami, and Grafana.
+- add the DNS A record for the admin domain to the VPS IP;
+- rerun admin-domain HTTPS smoke checks for admin auth, Umami, and Grafana.
 
 ### CI Gate
 

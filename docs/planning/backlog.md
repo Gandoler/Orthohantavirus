@@ -32,7 +32,7 @@ Move items here when requirements and acceptance criteria are clear.
 
 | ID | Title | Blocker | Next Action |
 | --- | --- | --- | --- |
-| OHV-047 | Verify public HTTPS after DNS cutover | Public DNS for the production and admin domains does not resolve to the VPS yet | Add A records for both domains, wait for propagation, then rerun production smoke checks |
+| OHV-047 | Verify admin HTTPS after DNS cutover | Admin DNS does not resolve to the VPS yet | Add an A record for `admin.xn--80aagyweapgkddrtb.xn--p1ai`, wait for propagation, then rerun admin HTTPS smoke checks |
 
 ## Done
 
@@ -79,3 +79,8 @@ Move items here when requirements and acceptance criteria are clear.
 | OHV-048 | Redesign public frontend for credible monitoring UI | 2026-05-13 | Added role-based frontend plan, quieter dashboard styling, news filters, and WebGL fallback map |
 | OHV-049 | Add manual news admin console | 2026-05-13 | Added admin news API, S3-backed manual news store, admin UI, Caddy admin route, and tests |
 | OHV-050 | Add interactive repository and operations handbook | 2026-05-13 | Added `docs/handbook/index.html` with checklists, commands, and guided operations chapters |
+| OHV-051 | Production-grade public monitor redesign | 2026-05-13 | Rebuilt public monitor shell with compact metrics, filters, dark mode, responsive layout, and polished medical surveillance styling |
+| OHV-052 | MapLibre clustering, heatmap, and fallback performance pass | 2026-05-13 | Added lazy MapLibre boot, GeoJSON clustering, heatmap, layer visibility toggles, WebGL fallback, and map gesture tests |
+| OHV-053 | Indexable SEO pages and dynamic sitemap | 2026-05-13 | Added homepage metadata, robots/sitemap, static SEO pages, backend HTML pages for news/countries/outbreaks, and Caddy routes |
+| OHV-054 | Browser screenshot and Lighthouse evidence pack | 2026-05-13 | Added screenshot capture script and saved desktop/mobile light/dark screenshots, console report, and Lighthouse JSON |
+| OHV-055 | Production redeploy and SEO smoke | 2026-05-13 | Deployed to VPS and verified internal plus public HTTPS health, sitemap, news, country, outbreak, and robots routes; admin HTTPS remains blocked by DNS |
