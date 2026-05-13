@@ -3,10 +3,15 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from shared.config import get_settings
 from shared.contracts import HealthResponse, MetadataResponse
+from shared.observability import configure_json_logging, install_access_log_middleware
 from shared.public_artifacts import empty_feature_collection, read_json_artifact
 from shared.storage import S3Storage
 
+settings = get_settings()
+configure_json_logging(settings)
+
 app = FastAPI(title="Orthohantavirus Map API", version="0.1.0")
+install_access_log_middleware(app, settings)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -17,7 +22,6 @@ app.add_middleware(
 
 @app.get("/health", response_model=HealthResponse)
 def health() -> HealthResponse:
-    settings = get_settings()
     storage = S3Storage(settings)
     return HealthResponse(
         status="ok",
@@ -30,7 +34,6 @@ def health() -> HealthResponse:
 
 @app.get("/v1/metadata", response_model=MetadataResponse)
 def metadata() -> MetadataResponse:
-    settings = get_settings()
     manifest = read_json_artifact(S3Storage(settings), "manifests/latest.json", {})
     return MetadataResponse(
         app_env=settings.app_env,
@@ -43,7 +46,7 @@ def metadata() -> MetadataResponse:
 @app.get("/v1/map/regions")
 def map_regions() -> dict:
     return read_json_artifact(
-        S3Storage(get_settings()),
+        S3Storage(settings),
         "public/map/latest/regions.geojson",
         empty_feature_collection(),
     )
@@ -52,7 +55,7 @@ def map_regions() -> dict:
 @app.get("/v1/map/outbreaks")
 def map_outbreaks() -> dict:
     return read_json_artifact(
-        S3Storage(get_settings()),
+        S3Storage(settings),
         "public/map/latest/outbreaks.geojson",
         empty_feature_collection(),
     )
@@ -61,7 +64,7 @@ def map_outbreaks() -> dict:
 @app.get("/v1/stats/summary")
 def stats_summary() -> dict:
     return read_json_artifact(
-        S3Storage(get_settings()),
+        S3Storage(settings),
         "public/stats/latest/summary.json",
         {
             "sources": [],
@@ -77,7 +80,7 @@ def stats_summary() -> dict:
 @app.get("/v1/stats/timeline")
 def stats_timeline() -> dict:
     return read_json_artifact(
-        S3Storage(get_settings()),
+        S3Storage(settings),
         "public/timeline/latest/cases.json",
         {"items": []},
     )
@@ -85,5 +88,5 @@ def stats_timeline() -> dict:
 
 @app.get("/v1/sources")
 def sources() -> dict:
-    manifest = read_json_artifact(S3Storage(get_settings()), "manifests/latest.json", {"sources": []})
+    manifest = read_json_artifact(S3Storage(settings), "manifests/latest.json", {"sources": []})
     return {"sources": manifest.get("sources", [])}

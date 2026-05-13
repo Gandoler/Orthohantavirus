@@ -3,10 +3,15 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from shared.config import get_settings
 from shared.contracts import HealthResponse, NewsItem
+from shared.observability import configure_json_logging, install_access_log_middleware
 from shared.public_artifacts import read_json_artifact
 from shared.storage import S3Storage
 
+settings = get_settings()
+configure_json_logging(settings)
+
 app = FastAPI(title="Orthohantavirus News Service", version="0.1.0")
+install_access_log_middleware(app, settings)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -17,7 +22,6 @@ app.add_middleware(
 
 @app.get("/health", response_model=HealthResponse)
 def health() -> HealthResponse:
-    settings = get_settings()
     storage = S3Storage(settings)
     return HealthResponse(
         status="ok",
@@ -34,7 +38,7 @@ def news_feed(
     tag: str | None = None,
     source: str | None = None,
 ) -> list[NewsItem]:
-    feed = read_json_artifact(S3Storage(get_settings()), "public/news/latest/feed.json", {"items": []})
+    feed = read_json_artifact(S3Storage(settings), "public/news/latest/feed.json", {"items": []})
     items = feed.get("items", [])
     if tag is not None:
         items = [item for item in items if tag in item.get("tags", [])]
@@ -45,7 +49,7 @@ def news_feed(
 
 @app.get("/v1/news/tags", response_model=list[str])
 def news_tags() -> list[str]:
-    feed = read_json_artifact(S3Storage(get_settings()), "public/news/latest/feed.json", {"items": []})
+    feed = read_json_artifact(S3Storage(settings), "public/news/latest/feed.json", {"items": []})
     tags: set[str] = set()
     for item in feed.get("items", []):
         tags.update(item.get("tags", []))
@@ -54,7 +58,7 @@ def news_tags() -> list[str]:
 
 @app.get("/v1/news/{news_id}", response_model=NewsItem)
 def news_item(news_id: str) -> NewsItem:
-    feed = read_json_artifact(S3Storage(get_settings()), "public/news/latest/feed.json", {"items": []})
+    feed = read_json_artifact(S3Storage(settings), "public/news/latest/feed.json", {"items": []})
     for item in feed.get("items", []):
         if item.get("id") == news_id:
             return item

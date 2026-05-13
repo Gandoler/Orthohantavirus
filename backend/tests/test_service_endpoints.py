@@ -1,7 +1,9 @@
 from fastapi.testclient import TestClient
+import orjson
 
 from services.map_api.main import app as map_app
 from services.news_service.main import app as news_app
+from shared.observability.logging import JsonLogFormatter
 from shared.storage import S3Storage
 
 PUBLIC_ARTIFACTS = {
@@ -133,3 +135,21 @@ def test_news_service_item_and_tags(monkeypatch) -> None:
     assert client.get("/v1/news/who-test").json()["title"] == "Test news"
     assert client.get("/v1/news/tags").json() == ["hantavirus", "official", "surveillance"]
     assert client.get("/v1/news/missing").status_code == 404
+
+
+def test_api_access_log_is_structured_json(monkeypatch, caplog) -> None:
+    monkeypatch.setattr(S3Storage, "bucket_available", lambda self: True)
+
+    with caplog.at_level("INFO", logger="orthohantavirus.access"):
+        response = TestClient(map_app).get("/health")
+
+    assert response.status_code == 200
+    records = [record for record in caplog.records if getattr(record, "event", None) == "request_finished"]
+    assert records
+    payload = orjson.loads(JsonLogFormatter().format(records[-1]))
+    assert payload["event"] == "request_finished"
+    assert payload["method"] == "GET"
+    assert payload["path"] == "/health"
+    assert payload["status_code"] == 200
+    assert payload["service"] == "orthohantavirus-service"
+    assert "duration_ms" in payload
