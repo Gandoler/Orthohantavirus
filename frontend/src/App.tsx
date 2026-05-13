@@ -4,6 +4,8 @@ import {
   AlertCircle,
   AlertTriangle,
   CheckCircle2,
+  ChevronDown,
+  ChevronUp,
   Compass,
   Database,
   ExternalLink,
@@ -12,7 +14,6 @@ import {
   ListFilter,
   Loader2,
   Lock,
-  MapPin,
   Moon,
   Newspaper,
   Plus,
@@ -22,6 +23,7 @@ import {
   Sun,
   ThermometerSun,
   Trash2,
+  X,
 } from "lucide-react";
 import type {
   GeoJSONSource,
@@ -94,6 +96,11 @@ function PublicMapApp({ theme, onToggleTheme }: { theme: Theme; onToggleTheme: (
   const [sourceFilter, setSourceFilter] = useState("all");
   const [query, setQuery] = useState("");
   const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [feedSheetOpen, setFeedSheetOpen] = useState(false);
+  const [regionPanelOpen, setRegionPanelOpen] = useState(() => {
+    if (typeof window === "undefined") return true;
+    return window.matchMedia?.("(min-width: 960px)").matches ?? true;
+  });
 
   const refreshData = useCallback(() => {
     setDataState("loading");
@@ -137,150 +144,187 @@ function PublicMapApp({ theme, onToggleTheme }: { theme: Theme; onToggleTheme: (
 
   const handleSelectRegion = useCallback((region: RegionFeature) => {
     setSelectedRegion(region);
+    setRegionPanelOpen(true);
     trackEvent("region_select", {
       region_code: region.properties.region_code,
       source: region.properties.sources.join(","),
     });
   }, []);
 
+  const shellClasses = [
+    "monitor-shell",
+    sidebarOpen ? "" : "monitor-shell--sidebar-closed",
+    feedSheetOpen ? "monitor-shell--sheet-open" : "",
+  ]
+    .filter(Boolean)
+    .join(" ");
+
   return (
-    <main className={sidebarOpen ? "monitor-shell" : "monitor-shell monitor-shell--sidebar-closed"}>
+    <main className={shellClasses}>
       <aside className="monitor-sidebar" aria-label="News feed">
-        <header className="brand-strip">
-          <div>
-            <p className="eyebrow">Orthohantavirus monitor</p>
-            <h1>Cases, outbreaks, and verified updates</h1>
+        <div className="sidebar-handle" aria-hidden="true" />
+        <button
+          className="sidebar-sheet-toggle"
+          type="button"
+          onClick={() => setFeedSheetOpen((current) => !current)}
+          aria-expanded={feedSheetOpen}
+        >
+          <span className="sheet-toggle__inner">
+            <Newspaper size={16} aria-hidden="true" />
+            <span>{feedSheetOpen ? "Hide feed" : "Show feed"}</span>
+            <span className="sheet-toggle__count">{formatNumber(filteredNews.length)}</span>
+          </span>
+          {feedSheetOpen ? <ChevronDown size={18} aria-hidden="true" /> : <ChevronUp size={18} aria-hidden="true" />}
+        </button>
+
+        <div className="sidebar-scroll">
+          <section className="trust-strip" aria-label="Data trust and freshness">
+            <span>
+              <CheckCircle2 size={14} aria-hidden="true" />
+              Official-source first
+            </span>
+            <span>
+              <Database size={14} aria-hidden="true" />
+              Updated {formatDate(latestDate)}
+            </span>
+          </section>
+
+          {dataState === "loading" ? (
+            <MetricSkeleton />
+          ) : (
+            <section className="summary-grid" aria-label="Summary">
+              <Metric label="Reported cases" value={formatNumber(data.summary.reported_cases_total)} tone="red" />
+              <Metric label="Deaths" value={formatNumber(data.summary.reported_deaths_total)} tone="ink" />
+              <Metric label="Outbreak reports" value={formatNumber(data.summary.outbreak_events)} tone="amber" />
+              <Metric label="Verified updates" value={formatNumber(data.summary.news_items)} tone="blue" />
+            </section>
+          )}
+
+          <section className="feed-controls" aria-label="News filters">
+            <label className="search-control">
+              <Search size={15} aria-hidden="true" />
+              <input
+                aria-label="Search news"
+                placeholder="Search verified updates"
+                value={query}
+                onChange={(event) => setQuery(event.target.value)}
+              />
+            </label>
+            <label className="select-control">
+              <ListFilter size={15} aria-hidden="true" />
+              <select
+                aria-label="Filter news by source"
+                value={sourceFilter}
+                onChange={(event) => setSourceFilter(event.target.value)}
+              >
+                <option value="all">All sources</option>
+                {sourceOptions.map((source) => (
+                  <option key={source} value={source}>
+                    {source.toUpperCase()}
+                  </option>
+                ))}
+              </select>
+            </label>
+          </section>
+
+          <section className="news-list" aria-label="Official news">
+            <div className="section-title">
+              <Newspaper size={16} aria-hidden="true" />
+              <h2>Verified updates</h2>
+              <span>{formatNumber(filteredNews.length)}</span>
+            </div>
+            {dataState === "loading" ? (
+              <NewsSkeleton />
+            ) : (
+              filteredNews.map((item) => <NewsCard item={item} key={item.id} />)
+            )}
+            {dataState !== "loading" && filteredNews.length === 0 ? (
+              <p className="empty-state">No updates matched the current filters.</p>
+            ) : null}
+          </section>
+        </div>
+      </aside>
+
+      <div className="map-stage">
+        <HantaMap
+          data={data}
+          dataState={dataState}
+          visibleLayers={visibleLayers}
+          onSelectRegion={handleSelectRegion}
+        />
+
+        <header className="map-topbar" aria-label="Application header">
+          <div className="map-topbar__brand">
+            <span className="brand-mark" aria-hidden="true" />
+            <div>
+              <p className="eyebrow">Orthohantavirus monitor</p>
+              <strong>
+                <span className="desktop-only">Cases, outbreaks &amp; verified updates</span>
+                <span className="mobile-only">Surveillance map</span>
+              </strong>
+            </div>
           </div>
-          <div className="brand-actions">
+          <div className="map-topbar__actions">
             <DataStatus state={dataState} />
+            <button
+              className="icon-button icon-button--ghost desktop-only"
+              type="button"
+              onClick={() => setSidebarOpen((current) => !current)}
+              title={sidebarOpen ? "Hide feed" : "Show feed"}
+            >
+              <Layers size={16} aria-hidden="true" />
+              <span>{sidebarOpen ? "Hide feed" : "Show feed"}</span>
+            </button>
+            <button
+              className="icon-button icon-button--ghost"
+              type="button"
+              onClick={refreshData}
+              title="Refresh data"
+            >
+              <RefreshCw size={16} aria-hidden="true" />
+              <span className="desktop-only">Refresh</span>
+            </button>
             <ThemeButton theme={theme} onToggleTheme={onToggleTheme} />
           </div>
         </header>
 
-        <section className="trust-strip" aria-label="Data trust and freshness">
-          <span>
-            <CheckCircle2 size={15} aria-hidden="true" />
-            Official-source first
-          </span>
-          <span>
-            <Database size={15} aria-hidden="true" />
-            Updated {formatDate(latestDate)}
-          </span>
-        </section>
-
-        {dataState === "loading" ? (
-          <MetricSkeleton />
-        ) : (
-          <section className="summary-grid" aria-label="Summary">
-            <Metric label="Reported cases" value={formatNumber(data.summary.reported_cases_total)} tone="red" />
-            <Metric label="Deaths" value={formatNumber(data.summary.reported_deaths_total)} tone="ink" />
-            <Metric label="Outbreak reports" value={formatNumber(data.summary.outbreak_events)} tone="amber" />
-            <Metric label="Verified updates" value={formatNumber(data.summary.news_items)} tone="blue" />
-          </section>
-        )}
-
-        <section className="feed-controls" aria-label="News filters">
-          <label className="search-control">
-            <Search size={16} aria-hidden="true" />
-            <input
-              aria-label="Search news"
-              placeholder="Search verified updates"
-              value={query}
-              onChange={(event) => setQuery(event.target.value)}
-            />
-          </label>
-          <label className="select-control">
-            <ListFilter size={16} aria-hidden="true" />
-            <select
-              aria-label="Filter news by source"
-              value={sourceFilter}
-              onChange={(event) => setSourceFilter(event.target.value)}
-            >
-              <option value="all">All sources</option>
-              {sourceOptions.map((source) => (
-                <option key={source} value={source}>
-                  {source.toUpperCase()}
-                </option>
-              ))}
-            </select>
-          </label>
-        </section>
-
-        <section className="news-list" aria-label="Official news">
-          <div className="section-title">
-            <Newspaper size={17} aria-hidden="true" />
-            <h2>Verified updates</h2>
-            <span>{formatNumber(filteredNews.length)}</span>
-          </div>
-          {dataState === "loading" ? (
-            <NewsSkeleton />
-          ) : (
-            filteredNews.map((item) => <NewsCard item={item} key={item.id} />)
-          )}
-          {dataState !== "loading" && filteredNews.length === 0 ? (
-            <p className="empty-state">No updates matched the current filters.</p>
-          ) : null}
-        </section>
-      </aside>
-
-      <section className="map-workspace" aria-label="Map workspace">
-        <div className="map-toolbar">
-          <button
-            className="icon-button sidebar-toggle"
-            type="button"
-            onClick={() => setSidebarOpen((current) => !current)}
-          >
-            <Layers size={17} aria-hidden="true" />
-            <span>{sidebarOpen ? "Hide feed" : "Show feed"}</span>
-          </button>
-          <div className="toolbar-title">
-            <p className="eyebrow">Surveillance map</p>
-            <strong>{mapTitle(visibleLayers)}</strong>
-          </div>
-          <div className="layer-toggles" aria-label="Map layers">
-            <LayerButton
-              active={visibleLayers.cases}
-              icon={<ThermometerSun size={16} aria-hidden="true" />}
-              label="Cases"
-              onClick={() => toggleLayer("cases", setVisibleLayers)}
-            />
-            <LayerButton
-              active={visibleLayers.outbreaks}
-              icon={<Flame size={16} aria-hidden="true" />}
-              label="Outbreaks"
-              onClick={() => toggleLayer("outbreaks", setVisibleLayers)}
-            />
-            <LayerButton
-              active={visibleLayers.heatmap}
-              icon={<Activity size={16} aria-hidden="true" />}
-              label="Heatmap"
-              onClick={() => toggleLayer("heatmap", setVisibleLayers)}
-            />
-            <LayerButton
-              active={visibleLayers.news}
-              icon={<Newspaper size={16} aria-hidden="true" />}
-              label="News"
-              onClick={() => toggleLayer("news", setVisibleLayers)}
-            />
-          </div>
-          <button className="icon-button" type="button" onClick={refreshData} title="Refresh data">
-            <RefreshCw size={17} aria-hidden="true" />
-            <span>Refresh</span>
-          </button>
-        </div>
-
-        <div className="map-stage">
-          <HantaMap
-            data={data}
-            dataState={dataState}
-            visibleLayers={visibleLayers}
-            onSelectRegion={handleSelectRegion}
+        <div className="map-controls" aria-label="Map layers">
+          <LayerButton
+            active={visibleLayers.cases}
+            icon={<ThermometerSun size={15} aria-hidden="true" />}
+            label="Cases"
+            onClick={() => toggleLayer("cases", setVisibleLayers)}
           />
-          <MapStatusOverlay state={dataState} errorText={errorText} hasRenderableData={hasRenderableMapData} />
-          <RegionPanel region={selectedRegion} generatedAt={latestDate} />
-          <MapLegend visibleLayers={visibleLayers} />
+          <LayerButton
+            active={visibleLayers.outbreaks}
+            icon={<Flame size={15} aria-hidden="true" />}
+            label="Outbreaks"
+            onClick={() => toggleLayer("outbreaks", setVisibleLayers)}
+          />
+          <LayerButton
+            active={visibleLayers.heatmap}
+            icon={<Activity size={15} aria-hidden="true" />}
+            label="Heatmap"
+            onClick={() => toggleLayer("heatmap", setVisibleLayers)}
+          />
+          <LayerButton
+            active={visibleLayers.news}
+            icon={<Newspaper size={15} aria-hidden="true" />}
+            label="News"
+            onClick={() => toggleLayer("news", setVisibleLayers)}
+          />
         </div>
-      </section>
+
+        <MapStatusOverlay state={dataState} errorText={errorText} hasRenderableData={hasRenderableMapData} />
+        <MapLegend visibleLayers={visibleLayers} />
+        <RegionPanel
+          region={selectedRegion}
+          generatedAt={latestDate}
+          open={regionPanelOpen}
+          onClose={() => setRegionPanelOpen(false)}
+          onOpen={() => setRegionPanelOpen(true)}
+        />
+      </div>
     </main>
   );
 }
@@ -649,17 +693,17 @@ function HantaMap({
               },
               layers: [{ id: "osm", type: "raster", source: "osm" }],
             },
-            center: [8, 43],
-            zoom: 1.55,
+            center: [15, 25],
+            zoom: 2.1,
             minZoom: 1,
-            attributionControl: {},
+            attributionControl: { compact: true },
           });
         } catch {
           setFallbackReason("The interactive map could not start. Showing the compatibility map.");
           return;
         }
 
-        map.addControl(new maplibregl.NavigationControl({ visualizePitch: false }), "top-right");
+        map.addControl(new maplibregl.NavigationControl({ visualizePitch: false, showCompass: false }), "bottom-right");
         map.on("load", () => {
           installMapLayers(
             map,
@@ -915,7 +959,7 @@ function fitMapToData(map: MapLibreMap, maplibregl: MapLibreModule, data: AppDat
     (current, coord) => current.extend(coord),
     new maplibregl.LngLatBounds(coords[0], coords[0]),
   );
-  map.fitBounds(bounds, { padding: 70, maxZoom: 4.8, duration: 0 });
+  map.fitBounds(bounds, { padding: 120, maxZoom: 3.2, duration: 0 });
 }
 
 function renderableRegions(regions: AppData["regions"]): GeoJSONSourceSpecification["data"] {
@@ -1116,18 +1160,51 @@ function MapLegend({ visibleLayers }: { visibleLayers: LayerState }) {
 function RegionPanel({
   region,
   generatedAt,
+  open,
+  onClose,
+  onOpen,
 }: {
   region: RegionFeature | null;
   generatedAt: string | undefined;
+  open: boolean;
+  onClose: () => void;
+  onOpen: () => void;
 }) {
   if (!region) {
     return null;
   }
 
+  if (!open) {
+    return (
+      <button
+        type="button"
+        className="region-pill"
+        onClick={onOpen}
+        aria-label={`Show details for ${region.properties.label}`}
+      >
+        <span className="region-pill__dot" aria-hidden="true" />
+        <span className="region-pill__label">{region.properties.label}</span>
+        <span className="region-pill__value">{formatNumber(region.properties.confirmed_cases)}</span>
+      </button>
+    );
+  }
+
   return (
     <aside className="region-panel" aria-label="Selected region">
-      <p className="eyebrow">Selected region</p>
-      <h2>{region.properties.label}</h2>
+      <header className="region-panel__head">
+        <div>
+          <p className="eyebrow">Selected region</p>
+          <h2>{region.properties.label}</h2>
+        </div>
+        <button
+          type="button"
+          className="icon-button icon-button--mini"
+          onClick={onClose}
+          aria-label="Hide region details"
+        >
+          <X size={15} aria-hidden="true" />
+        </button>
+      </header>
       <dl>
         <div>
           <dt>Cases</dt>
@@ -1147,7 +1224,7 @@ function RegionPanel({
         </div>
       </dl>
       <p className="freshness">
-        <Compass size={14} aria-hidden="true" />
+        <Compass size={13} aria-hidden="true" />
         Updated {formatDate(generatedAt)}
       </p>
     </aside>
@@ -1157,14 +1234,6 @@ function RegionPanel({
 function toggleLayer(layer: keyof LayerState, setVisibleLayers: Dispatch<SetStateAction<LayerState>>) {
   setVisibleLayers((current) => ({ ...current, [layer]: !current[layer] }));
   trackEvent("map_layer_toggle", { layer });
-}
-
-function mapTitle(visibleLayers: LayerState): string {
-  const active = Object.entries(visibleLayers)
-    .filter(([, visible]) => visible)
-    .map(([layer]) => layer);
-  if (!active.length) return "All surveillance layers hidden";
-  return active.map((layer) => layer[0].toUpperCase() + layer.slice(1)).join(", ");
 }
 
 function loadInitialTheme(): Theme {
