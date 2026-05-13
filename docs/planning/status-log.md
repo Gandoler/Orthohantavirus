@@ -4,6 +4,56 @@ Use this file for chronological progress notes. Keep it concise and factual.
 
 ## 2026-05-13
 
+### VPS Production Bootstrap
+
+Status: blocked
+
+Completed:
+
+- created local and server `.env` files with production values; both are ignored by Git;
+- bootstrapped the VPS with Docker, Docker Compose, firewall rules, fail2ban, unattended upgrades, a deploy user, SSH key auth, disabled password SSH, disabled root SSH, and swap;
+- deployed the production Compose stack from the local workspace with `SKIP_GIT_PULL=1 SKIP_PUBLIC_SMOKE=1 ./infra/scripts/deploy.sh`;
+- fixed the production frontend image so Caddy runs as an explicit non-root app user;
+- fixed MinIO initialization so non-root app S3 credentials get a bucket-scoped policy;
+- fixed MinIO backup/restore scripts to work with the actual Compose project volume name on the VPS;
+- ran production ingestion for CDC, ECDC, and WHO sources;
+- verified MinIO public map/news artifacts were written;
+- installed cron entries for periodic ingestion and local MinIO backups.
+
+Verification:
+
+- VPS stack `docker compose ps`: all production services up;
+- map API internal health: passed;
+- news service internal health: passed;
+- summary endpoint after ingestion: 69 reported case records, 2775 reported cases, 309 deaths, 11 outbreak events, 11 news items;
+- MinIO artifact check: `regions.geojson`, `outbreaks.geojson`, `feed.json`, and `manifests/latest.json` present;
+- production MinIO backup command: passed;
+- SSH hardening check: deploy key works, password auth is rejected, root SSH is rejected.
+
+Blocked:
+
+- public DNS for the production and admin domains is still NXDOMAIN, so Caddy cannot complete ACME validation and public HTTPS smoke checks are blocked.
+
+Next:
+
+- add DNS A records for the production and admin domains to the VPS IP;
+- rerun `SKIP_GIT_PULL=1 ./infra/scripts/deploy.sh`;
+- run public HTTPS smoke checks for frontend, map API, news API, admin auth, Umami, and Grafana.
+
+### CI Gate
+
+Status: done
+
+Completed:
+
+- added GitHub Actions CI for backend lint/tests;
+- added frontend unit tests, Playwright smoke tests, and production build to CI;
+- added infra validation for shell scripts, Compose configs, and Caddy configs.
+
+Verification:
+
+- equivalent local backend, frontend, Playwright, Compose, shell syntax, and Caddy validation commands passed.
+
 ### Remaining Work Audit
 
 Status: done

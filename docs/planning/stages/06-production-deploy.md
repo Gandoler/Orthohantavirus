@@ -39,13 +39,17 @@ Deploy the MVP on a VPS with Docker Compose, HTTPS, storage, backups, health che
 | OHV-034 | Harden production admin auth at reverse proxy layer | infra | P0 | done |
 | OHV-042 | Run production security review | security | P0 | done |
 | OHV-043 | Write production deployment and update playbook | infra | P0 | done |
+| OHV-036 | Verify real VPS production deploy | infra | P0 | done |
+| OHV-040 | Add CI/CD pipeline for tests and Docker config validation | infra | P1 | done |
+| OHV-047 | Verify public HTTPS after DNS cutover | infra | P0 | blocked |
 | OHV-044 | Add encrypted remote backup sync | infra | P0 | todo |
 
 ## Acceptance Criteria
 
 - [x] `docker compose -f docker-compose.prod.yml config` renders with `.env.prod.example`.
-- [ ] Public frontend is reachable on HTTPS.
-- [ ] `/api/map/health` and `/api/news/health` are reachable through reverse proxy.
+- [x] Production stack starts on the VPS.
+- [ ] Public frontend is reachable on HTTPS. Blocked until DNS points to the VPS.
+- [ ] `/api/map/health` and `/api/news/health` are reachable through reverse proxy. Blocked until DNS points to the VPS.
 - [x] Admin analytics and Grafana require authentication.
 - [x] Ingestion can be triggered manually through documented Compose command.
 - [x] Scheduled ingestion is documented with cron example.
@@ -94,6 +98,11 @@ Implemented:
 - production security review;
 - deployment/update/observability playbook;
 - hardened CORS, browser security headers, non-root app containers, deploy secret preflight, and Docker log rotation.
+- real VPS bootstrap with deploy user, Docker Compose, firewall, SSH key auth, disabled password/root SSH, fail2ban, unattended upgrades, and swap;
+- rsync-friendly deployment flow for first bootstrap before a remote Git workflow is configured;
+- MinIO app user/policy initialization for non-root S3 credentials;
+- production cron entries for periodic ingestion and local MinIO backups;
+- Compose-project-aware MinIO backup and restore scripts.
 
 Verification:
 
@@ -101,10 +110,19 @@ Verification:
 - `docker compose --env-file .env.prod.example -f docker-compose.prod.yml build frontend map-api news-service`: passed;
 - Caddy config validation through `caddy:2-alpine`: passed;
 - production frontend image uses a separate `orthohantavirus-frontend-prod` image name from local dev.
+- real VPS production Compose stack: passed;
+- manual production ingestion: passed, wrote CDC, ECDC, and WHO artifacts;
+- production MinIO artifact check: passed for map and news public artifacts;
+- internal production API/news smoke: passed;
+- production backup command: passed and wrote a MinIO archive.
+
+Blocked:
+
+- public DNS for the production and admin domains currently returns NXDOMAIN, so Caddy cannot issue HTTPS certificates and public-domain smoke checks cannot pass yet.
 
 Remaining:
 
-- run a real VPS deploy with DNS and production secrets;
+- add DNS A records for the production and admin domains, then rerun public HTTPS smoke checks;
 - add encrypted remote backup sync;
 - add uptime/stale-manifest alerts;
 - add CI scanning and immutable image publishing;

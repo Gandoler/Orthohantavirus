@@ -8,7 +8,6 @@ Keep new items short at first. When an item becomes ready for implementation, ex
 
 | ID | Title | Stage | Area | Priority | Status |
 | --- | --- | --- | --- | --- | --- |
-| OHV-040 | Add CI/CD pipeline for tests and Docker config validation | 06 | infra | P1 | todo |
 | OHV-041 | Add immutable GHCR image publishing | 06 | infra | P2 | todo |
 | OHV-044 | Add encrypted remote backup sync | 06 | infra | P0 | todo |
 | OHV-045 | Add uptime and stale-manifest alerts | 06 | observability | P1 | todo |
@@ -33,7 +32,7 @@ Move items here when requirements and acceptance criteria are clear.
 
 | ID | Title | Blocker | Next Action |
 | --- | --- | --- | --- |
-| OHV-036 | Verify real VPS production deploy | Needs a target server and real domains/secrets | Run `infra/scripts/deploy.sh` on VPS after DNS and `.env` are prepared |
+| OHV-047 | Verify public HTTPS after DNS cutover | Public DNS for the production and admin domains does not resolve to the VPS yet | Add A records for both domains, wait for propagation, then rerun production smoke checks |
 
 ## Done
 
@@ -75,3 +74,5 @@ Move items here when requirements and acceptance criteria are clear.
 | OHV-021 | Research ecological risk layer data model | 2026-05-13 | Added `docs/planning/risk-layer-feasibility.md` |
 | OHV-042 | Run production security review | 2026-05-13 | Added `docs/security/security-review.md` and fixed MVP hardening gaps |
 | OHV-043 | Write production deployment and update playbook | 2026-05-13 | Added `docs/operations/production-deployment-playbook.md` |
+| OHV-036 | Verify real VPS production deploy | 2026-05-13 | VPS bootstrap, Docker stack deploy, manual ingestion, MinIO artifact check, and internal API/news smoke passed; public HTTPS waits on DNS |
+| OHV-040 | Add CI/CD pipeline for tests and Docker config validation | 2026-05-13 | Added GitHub Actions CI for backend tests/lint, frontend unit/e2e/build, Compose config, shell syntax, and Caddy validation |
