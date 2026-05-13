@@ -29,23 +29,48 @@ Build the first usable public experience: an interactive map with a left news pa
 
 | ID | Task | Area | Priority | Status |
 | --- | --- | --- | --- | --- |
-| OHV-012 | Build first map screen with left news panel | frontend | P0 | todo |
-| OHV-013 | Add source attribution and freshness indicators | frontend | P0 | todo |
-| OHV-001 | Choose final map engine: MapLibre GL JS or Leaflet | frontend | P0 | todo |
-| TBD | Implement API client with TanStack Query | frontend | P0 | todo |
-| TBD | Implement map layer toggles | frontend | P1 | todo |
-| TBD | Implement region detail panel | frontend | P1 | todo |
-| TBD | Implement mobile bottom sheet behavior | frontend | P1 | todo |
+| OHV-012 | Build first map screen with left news panel | frontend | P0 | done |
+| OHV-013 | Add source attribution and freshness indicators | frontend | P0 | done |
+| OHV-001 | Choose final map engine: MapLibre GL JS or Leaflet | frontend | P0 | done |
+| TBD | Implement API client with TanStack Query | frontend | P2 | deferred |
+| TBD | Implement map layer toggles | frontend | P1 | done |
+| TBD | Implement region detail panel | frontend | P1 | done |
+| TBD | Implement mobile bottom sheet behavior | frontend | P1 | deferred |
 
 ## Acceptance Criteria
 
-- [ ] First viewport is the working app, not a landing page.
-- [ ] The map renders region/case or outbreak data.
-- [ ] News panel is visible on desktop and accessible on mobile.
-- [ ] User can toggle at least reported cases and outbreaks layers.
-- [ ] Each visible data item has source and freshness information.
-- [ ] Modeled risk is visually and textually separated from reported cases if present.
-- [ ] Frontend has at least smoke tests for API loading and main screen rendering.
+- [x] First viewport is the working app, not a landing page.
+- [x] The map renders region/case or outbreak data.
+- [x] News panel is visible on desktop and accessible on mobile.
+- [x] User can toggle at least reported cases and outbreaks layers.
+- [x] Each visible data item has source and freshness information.
+- [x] Modeled risk is visually and textually separated from reported cases if present.
+- [ ] Frontend has browser-level smoke tests for API loading and main screen rendering.
+
+## Current Status
+
+Status: review
+
+Implemented:
+
+- MapLibre map workspace with OSM raster base map;
+- reported-case layer and outbreak-report layer toggles;
+- summary metrics, news panel, selected-region panel;
+- source links, source labels, freshness, live/fallback data state;
+- optional Umami analytics events for source links, layer toggles, and region selection;
+- responsive layout CSS.
+
+Verification:
+
+- `pnpm test`: 5 passed;
+- `pnpm build`: passed;
+- `docker compose up --build -d frontend`: frontend container started;
+- `curl -I http://localhost:5173/`: returned `HTTP/1.1 200 OK`.
+
+Remaining:
+
+- add Playwright/browser visual smoke checks for desktop/mobile;
+- improve mobile details into a true bottom-sheet interaction.
 
 ## UX Rules
 
