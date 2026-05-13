@@ -6,13 +6,16 @@ Use this file for architecture and product decisions that should not be rediscov
 
 | ID | Title | Status | Date |
 | --- | --- | --- | --- |
-| ADR-001 | Use Docker Compose for MVP production, keep Kubernetes-ready boundaries | proposed | TBD |
-| ADR-002 | Use S3/MinIO as durable source of truth for MVP | proposed | TBD |
-| ADR-003 | Use Umami for visitor analytics and Loki/Grafana/Alloy for logs | proposed | TBD |
+| ADR-001 | Use Docker Compose for MVP production, keep Kubernetes-ready boundaries | accepted | 2026-05-12 |
+| ADR-002 | Use S3/MinIO as durable source of truth for MVP | accepted | 2026-05-12 |
+| ADR-003 | Use Umami for visitor analytics and Loki/Grafana/Alloy for logs | accepted | 2026-05-12 |
+| ADR-004 | Use MapLibre GL JS as the frontend map engine | accepted | 2026-05-12 |
+| ADR-005 | Use MinIO for first VPS deploy, keep managed S3 compatible | accepted | 2026-05-12 |
+| ADR-006 | Use ISO region codes and explicit geo precision | accepted | 2026-05-12 |
 
 ## ADR-001: Use Docker Compose For MVP Production
 
-Status: proposed
+Status: accepted
 
 Context:
 
@@ -30,7 +33,7 @@ Consequences:
 
 ## ADR-002: Use S3/MinIO As Durable Source Of Truth For MVP
 
-Status: proposed
+Status: accepted
 
 Context:
 
@@ -48,7 +51,7 @@ Consequences:
 
 ## ADR-003: Use Umami And Grafana Stack
 
-Status: proposed
+Status: accepted
 
 Context:
 
@@ -63,3 +66,69 @@ Consequences:
 - Admins get useful dashboards quickly.
 - Sensitive product analytics and operational logs stay separate.
 - More complex product analytics can be deferred.
+
+## ADR-004: Use MapLibre GL JS As The Frontend Map Engine
+
+Status: accepted
+
+Context:
+
+The product is map-first and is expected to grow from simple GeoJSON layers to richer choropleths, vector styles, and possibly vector tiles.
+
+Decision:
+
+Use MapLibre GL JS as the primary frontend map engine. Keep Leaflet as a fallback option only if WebGL requirements create unacceptable constraints.
+
+Consequences:
+
+- Better fit for styled vector layers and future tile-based scaling.
+- Slightly higher frontend complexity than Leaflet.
+- Browser smoke tests should verify that the map canvas renders correctly.
+
+Review trigger:
+
+Revisit if MVP data remains very small and MapLibre complexity slows development, or if target devices have WebGL limitations.
+
+## ADR-005: Use MinIO For First VPS Deploy, Keep Managed S3 Compatible
+
+Status: accepted
+
+Context:
+
+The project should be easy to run locally and easy to deploy on a single VPS. At the same time, raw source artifacts and normalized datasets should not depend on local container filesystems.
+
+Decision:
+
+Use the S3 API everywhere. Use MinIO locally and for the first VPS deploy. Keep the configuration compatible with managed S3 so production can switch later by changing environment variables.
+
+Consequences:
+
+- First server deploy remains self-contained.
+- Backups are mandatory if MinIO is used in production.
+- Moving to managed S3 later should not require application code changes.
+
+Review trigger:
+
+Revisit before public launch if data durability or backup operations become more important than single-server simplicity.
+
+## ADR-006: Use ISO Region Codes And Explicit Geo Precision
+
+Status: accepted
+
+Context:
+
+Sources publish data at different geographic levels. The app must avoid implying precise infection locations when only aggregated data exists.
+
+Decision:
+
+Use ISO 3166-1 alpha-2 for countries, ISO 3166-2 for admin1 regions where available, and explicit `geo_precision` values on every geographic record.
+
+Consequences:
+
+- Map joins have stable keys.
+- Aggregate data can be shown without misleading precision.
+- Source-specific region names still require mapping/validation.
+
+Review trigger:
+
+Revisit when adding admin2-level data or sources whose regions do not map cleanly to ISO subdivisions.
