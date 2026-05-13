@@ -58,6 +58,8 @@ hanta.example.com        A/AAAA -> VPS IP
 admin.hanta.example.com  A/AAAA -> VPS IP
 ```
 
+For an IDN domain, configure both the Unicode name in the registrar panel and verify the punycode form with `dig`. Caddy ACME validation will fail with NXDOMAIN until both public and admin hostnames resolve to the VPS.
+
 ## First Deploy
 
 ```bash
@@ -96,6 +98,24 @@ Normal update:
 ```bash
 cd /opt/orthohantavirus/repo
 ./infra/scripts/deploy.sh
+```
+
+Update after syncing the repository from a local workstation instead of pulling from Git:
+
+```bash
+SKIP_GIT_PULL=1 ./infra/scripts/deploy.sh
+```
+
+If DNS is not pointed at the server yet, skip the public-domain smoke during the first server bootstrap:
+
+```bash
+SKIP_GIT_PULL=1 SKIP_PUBLIC_SMOKE=1 ./infra/scripts/deploy.sh
+```
+
+After DNS propagation, run the same deploy without `SKIP_PUBLIC_SMOKE` so HTTPS and API routing are verified through the real public domain:
+
+```bash
+SKIP_GIT_PULL=1 ./infra/scripts/deploy.sh
 ```
 
 Risky update with pre-deploy data backup:

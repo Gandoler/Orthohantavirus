@@ -28,14 +28,16 @@ if [ "${BACKUP_BEFORE_DEPLOY:-0}" = "1" ]; then
   ./infra/scripts/backup-minio.sh
 fi
 
-git pull --ff-only
+if [ "${SKIP_GIT_PULL:-0}" != "1" ]; then
+  git pull --ff-only
+fi
 compose config >/dev/null
 compose build
 compose up -d --remove-orphans
 compose ps
 
 public_base_url="$(grep '^APP_PUBLIC_BASE_URL=' .env | cut -d= -f2- || true)"
-if [ -n "$public_base_url" ] && command -v curl >/dev/null 2>&1; then
+if [ "${SKIP_PUBLIC_SMOKE:-0}" != "1" ] && [ -n "$public_base_url" ] && command -v curl >/dev/null 2>&1; then
   curl -fsS "$public_base_url/api/map/health" >/dev/null
   curl -fsS "$public_base_url/api/news/health" >/dev/null
 fi

@@ -96,7 +96,7 @@ https://admin.hanta.example.com/grafana
 Cron example:
 
 ```cron
-15 */6 * * * cd /opt/orthohantavirus/repo && docker compose -f docker-compose.prod.yml run --rm data-ingestion python -m services.data_ingestion run-all
+15 */6 * * * cd /opt/orthohantavirus/repo && docker compose --env-file .env -f docker-compose.prod.yml run --rm data-ingestion python -m services.data_ingestion run-all >> /opt/orthohantavirus/ingestion.log 2>&1
 ```
 
 ## Backups
@@ -105,6 +105,12 @@ If production uses MinIO on the VPS:
 
 ```bash
 ./infra/scripts/backup-minio.sh
+```
+
+Cron example for daily local MinIO backups:
+
+```cron
+45 2 * * * cd /opt/orthohantavirus/repo && BACKUP_DIR=/opt/orthohantavirus/backups ./infra/scripts/backup-minio.sh >> /opt/orthohantavirus/backup.log 2>&1
 ```
 
 Restore:
