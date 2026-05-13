@@ -1,0 +1,192 @@
+services:
+  minio:
+    image: quay.io/minio/minio:latest
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-minioadmin}
+    ports:
+      - "${MINIO_API_PORT:-19000}:9000"
+      - "${MINIO_CONSOLE_PORT:-19001}:9001"
+    volumes:
+      - minio_data:/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  minio-init:
+    image: quay.io/minio/mc:latest
+    depends_on:
+      minio:
+        condition: service_healthy
+    environment:
+      MINIO_ENDPOINT: http://minio:9000
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-minioadmin}
+      S3_BUCKET: ${S3_BUCKET:-orthohantavirus-data}
+    volumes:
+      - ./infra/minio/init-buckets.sh:/scripts/init-buckets.sh:ro
+    entrypoint: ["/bin/sh", "/scripts/init-buckets.sh"]
+    restart: "no"
+
+  map-api:
+    build:
+      context: ./backend
+    command: uvicorn services.map_api.main:app --host 0.0.0.0 --port 8000 --reload
+    depends_on:
+      minio-init:
+        condition: service_completed_successfully
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      SERVICE_NAME: map-api
+      APP_ENV: ${APP_ENV:-local}
+      S3_ENDPOINT_URL: ${S3_ENDPOINT_URL:-http://minio:9000}
+      S3_REGION: ${S3_REGION:-us-east-1}
+      S3_BUCKET: ${S3_BUCKET:-orthohantavirus-data}
+      S3_ACCESS_KEY_ID: ${S3_ACCESS_KEY_ID:-minioadmin}
+      S3_SECRET_ACCESS_KEY: ${S3_SECRET_ACCESS_KEY:-minioadmin}
+      S3_FORCE_PATH_STYLE: ${S3_FORCE_PATH_STYLE:-true}
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+    ports:
+      - "${MAP_API_PORT:-8000}:8000"
+    volumes:
+      - ./backend:/app
+
+  news-service:
+    build:
+      context: ./backend
+    command: uvicorn services.news_service.main:app --host 0.0.0.0 --port 8001 --reload
+    depends_on:
+      minio-init:
+        condition: service_completed_successfully
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      SERVICE_NAME: news-service
+      APP_ENV: ${APP_ENV:-local}
+      S3_ENDPOINT_URL: ${S3_ENDPOINT_URL:-http://minio:9000}
+      S3_REGION: ${S3_REGION:-us-east-1}
+      S3_BUCKET: ${S3_BUCKET:-orthohantavirus-data}
+      S3_ACCESS_KEY_ID: ${S3_ACCESS_KEY_ID:-minioadmin}
+      S3_SECRET_ACCESS_KEY: ${S3_SECRET_ACCESS_KEY:-minioadmin}
+      S3_FORCE_PATH_STYLE: ${S3_FORCE_PATH_STYLE:-true}
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+    ports:
+      - "${NEWS_SERVICE_PORT:-8001}:8001"
+    volumes:
+      - ./backend:/app
+
+  data-ingestion:
+    build:
+      context: ./backend
+    command: python -m services.data_ingestion run-all
+    profiles: ["tools"]
+    depends_on:
+      minio-init:
+        condition: service_completed_successfully
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      SERVICE_NAME: data-ingestion
+      APP_ENV: ${APP_ENV:-local}
+      S3_ENDPOINT_URL: ${S3_ENDPOINT_URL:-http://minio:9000}
+      S3_REGION: ${S3_REGION:-us-east-1}
+      S3_BUCKET: ${S3_BUCKET:-orthohantavirus-data}
+      S3_ACCESS_KEY_ID: ${S3_ACCESS_KEY_ID:-minioadmin}
+      S3_SECRET_ACCESS_KEY: ${S3_SECRET_ACCESS_KEY:-minioadmin}
+      S3_FORCE_PATH_STYLE: ${S3_FORCE_PATH_STYLE:-true}
+      INGESTION_DEFAULT_SOURCES: ${INGESTION_DEFAULT_SOURCES:-cdc,ecdc,who}
+      INGESTION_WRITE_PUBLIC: ${INGESTION_WRITE_PUBLIC:-true}
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+    volumes:
+      - ./backend:/app
+
+  frontend:
+    image: orthohantavirus-frontend-dev
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.dev
+    command: sh -c "pnpm install --frozen-lockfile --config.confirmModulesPurge=false && pnpm dev --host 0.0.0.0"
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      CI: "true"
+      VITE_MAP_API_BASE_URL: ${VITE_MAP_API_BASE_URL:-http://localhost:8000}
+      VITE_NEWS_API_BASE_URL: ${VITE_NEWS_API_BASE_URL:-http://localhost:8001}
+    ports:
+      - "${FRONTEND_PORT:-5173}:5173"
+    volumes:
+      - ./frontend:/app
+      - frontend_node_modules:/app/node_modules
+
+  umami-db:
+    image: postgres:16-alpine
+    profiles: ["observability"]
+    environment:
+      POSTGRES_DB: umami
+      POSTGRES_USER: umami
+      POSTGRES_PASSWORD: ${UMAMI_DB_PASSWORD:-umami-password}
+    volumes:
+      - umami_db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U umami -d umami"]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+
+  umami:
+    image: ghcr.io/umami-software/umami:postgresql-latest
+    profiles: ["observability"]
+    environment:
+      DATABASE_URL: ${UMAMI_DATABASE_URL:-postgresql://umami:umami-password@umami-db:5432/umami}
+      APP_SECRET: ${UMAMI_APP_SECRET:-local-dev-secret}
+    ports:
+      - "3000:3000"
+    depends_on:
+      umami-db:
+        condition: service_healthy
+
+  loki:
+    image: grafana/loki:3.3.2
+    profiles: ["observability"]
+    command: -config.file=/etc/loki/local-config.yaml
+    volumes:
+      - ./infra/loki/loki-config.yml:/etc/loki/local-config.yaml:ro
+      - loki_data:/loki
+
+  grafana:
+    image: grafana/grafana:11.4.0
+    profiles: ["observability"]
+    environment:
+      GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER:-admin}
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-admin}
+    ports:
+      - "3001:3000"
+    volumes:
+      - grafana_data:/var/lib/grafana
+    depends_on:
+      - loki
+
+  alloy:
+    image: grafana/alloy:v1.5.1
+    profiles: ["observability"]
+    command: run /etc/alloy/config.alloy
+    volumes:
+      - ./infra/alloy/config.alloy:/etc/alloy/config.alloy:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    depends_on:
+      - loki
+
+volumes:
+  minio_data:
+  frontend_node_modules:
+  umami_db_data:
+  grafana_data:
+  loki_data:
