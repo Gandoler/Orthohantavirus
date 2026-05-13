@@ -1,0 +1,13 @@
+node_modules
+node_modules/**
+**/node_modules
+**/node_modules/**
+.pnpm-store
+.pnpm-store/**
+dist
+dist/**
+coverage
+coverage/**
+.vite
+.vite/**
+*.tsbuildinfo
