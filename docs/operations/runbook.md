@@ -11,6 +11,7 @@ Useful URLs:
 
 ```text
 frontend:     http://localhost:5173
+frontend EN:  http://localhost:5173/en/
 map-api:      http://localhost:8000
 news-service: http://localhost:8001
 minio:        http://localhost:19000
@@ -113,6 +114,28 @@ Local admin flow:
 1. Open `http://localhost:5173/admin`.
 2. Enter `NEWS_ADMIN_API_TOKEN` from local `.env`.
 3. Publish a manual item and check `http://localhost:8001/v1/news`.
+
+## Locales And SEO
+
+Public routing uses Russian as default and English under a path prefix:
+
+```text
+/                    Russian map UI
+/en/                 English map UI
+/about/              Russian article page
+/en/about/           English article page
+/news/<id>           Russian SSR news shell
+/en/news/<id>        English SSR news shell
+```
+
+The frontend updates `html lang`, canonical, hreflang, Open Graph locale, title, and description when the user switches language. The backend sitemap emits both RU and EN alternates for dynamic country, outbreak, and news pages.
+
+After deploy, check:
+
+- `/sitemap.xml` contains `xhtml:link` alternates for `ru`, `en`, and `x-default`;
+- `/robots.txt` disallows `/admin` and `/api/`;
+- `/` has `lang="ru"` and `/en/` switches to `lang="en"`;
+- canonical URLs point to the same locale as the current page.
 
 ## Scheduled Ingestion
 

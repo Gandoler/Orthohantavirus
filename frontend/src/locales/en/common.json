@@ -1,0 +1,65 @@
+{
+  "brand": {
+    "formal": "Orthohantavirus Monitor",
+    "short": "Hanta Monitor",
+    "eyebrow": "Surveillance map",
+    "tagline": "Verified cases, outbreaks, and official updates",
+    "mobileTitle": "Surveillance map"
+  },
+  "actions": {
+    "showFeed": "Show feed",
+    "hideFeed": "Hide feed",
+    "refresh": "Refresh",
+    "refreshData": "Refresh data",
+    "save": "Save",
+    "reload": "Reload",
+    "delete": "Delete",
+    "publish": "Publish",
+    "openMap": "Open map",
+    "readUpdate": "Read update",
+    "light": "Light",
+    "dark": "Dark",
+    "close": "Close"
+  },
+  "status": {
+    "liveApi": "Live API",
+    "loading": "Loading",
+    "apiFallback": "API fallback",
+    "sampleData": "Sample data",
+    "officialSourceFirst": "Official-source first",
+    "updated": "Updated {{date}}",
+    "unknown": "Unknown"
+  },
+  "language": {
+    "label": "Interface language",
+    "ru": "RU",
+    "en": "EN",
+    "switchToRu": "Переключить на русский",
+    "switchToEn": "Switch to English"
+  },
+  "footer": {
+    "project": "Project",
+    "sources": "Sources",
+    "methodology": "Methodology",
+    "license": "Data license",
+    "contact": "Contact",
+    "aboutText": "A map of confirmed orthohantavirus records published by official and reviewed sources.",
+    "sourcesText": "CDC, ECDC, WHO Disease Outbreak News, and editor-reviewed manual updates with attribution.",
+    "methodologyText": "Every record keeps source, period, confidence, and geographic precision metadata.",
+    "licenseText": "Derived open data is published as CC BY 4.0 unless an original source requires another mode.",
+    "build": "Build {{version}}",
+    "deployed": "Deploy: {{date}}",
+    "status": "Status",
+    "rss": "RSS",
+    "github": "GitHub",
+    "email": "contact@orthohantavirus.example"
+  },
+  "routes": {
+    "home": "Map",
+    "about": "About",
+    "methodology": "Methodology",
+    "dataSources": "Data sources",
+    "symptoms": "Symptoms",
+    "russia": "HFRS in Russia"
+  }
+}

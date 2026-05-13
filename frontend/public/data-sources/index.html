@@ -1,36 +1,98 @@
 <!doctype html>
-<html lang="en">
+<html lang="ru">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Data sources | Orthohantavirus Monitor</title>
+    <title>Источники данных | Ортхохантавирус.рф</title>
     <meta
       name="description"
-      content="Primary data sources and confidence model for Orthohantavirus Monitor surveillance pages."
+      content="Основные источники данных и модель уверенности для карты наблюдения Ортхохантавирус.рф."
     />
+    <meta name="robots" content="index,follow,max-image-preview:large" />
     <link rel="canonical" href="https://xn--80aagyweapgkddrtb.xn--p1ai/data-sources/" />
+    <link rel="alternate" hreflang="ru" href="https://xn--80aagyweapgkddrtb.xn--p1ai/data-sources/" />
+    <link rel="alternate" hreflang="en" href="https://xn--80aagyweapgkddrtb.xn--p1ai/en/data-sources/" />
+    <link rel="alternate" hreflang="x-default" href="https://xn--80aagyweapgkddrtb.xn--p1ai/data-sources/" />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
     <link rel="stylesheet" href="/static-page.css" />
+    <meta property="og:type" content="article" />
+    <meta property="og:locale" content="ru_RU" />
+    <meta property="og:locale:alternate" content="en_US" />
+    <meta property="og:title" content="Источники данных | Ортхохантавирус.рф" />
+    <meta property="og:description" content="Основные источники данных и модель уверенности для карты наблюдения." />
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "Dataset",
+        "name": "Orthohantavirus surveillance dataset",
+        "inLanguage": ["ru", "en"],
+        "license": "https://creativecommons.org/licenses/by/4.0/",
+        "creator": {"@type": "Organization", "name": "Ортхохантавирус.рф"},
+        "temporalCoverage": "1993/..",
+        "spatialCoverage": "Global",
+        "distribution": {"@type": "DataDownload", "encodingFormat": "application/json"}
+      }
+    </script>
   </head>
   <body>
-    <main class="static-page">
-      <p class="eyebrow">Data sources</p>
-      <h1>Public health sources and confidence</h1>
-      <p>
-        Orthohantavirus Monitor uses a source-first model: each map point and news item keeps a
-        source label, source URL, publication date, fetch date, and confidence value.
-      </p>
-      <h2>Current source families</h2>
-      <ul>
-        <li>CDC public hantavirus case data.</li>
-        <li>ECDC annual epidemiological report data.</li>
-        <li>WHO Disease Outbreak News and related public health updates.</li>
-        <li>Admin-reviewed manual news items for local editorial updates.</li>
-      </ul>
-      <nav>
-        <a href="/">Interactive map</a>
-        <a href="/about/">About</a>
-        <a href="/methodology/">Methodology</a>
+    <main class="article-shell">
+      <nav class="top-nav" aria-label="Навигация">
+        <a class="brand" href="/">
+          <img src="/favicon.svg" width="28" height="28" alt="" />
+          <span>Ортхохантавирус.рф</span>
+        </a>
+        <div class="nav-links">
+          <a href="/about/">О проекте</a>
+          <a href="/methodology/">Методология</a>
+          <a class="lang-link" href="/en/data-sources/">EN</a>
+        </div>
       </nav>
+      <header class="article-header">
+        <p class="eyebrow">Источники данных</p>
+        <h1>Публичные источники и уровни уверенности</h1>
+        <p class="abstract">
+          Модель проекта source-first: каждая точка карты и каждая новость сохраняет источник,
+          ссылку, дату публикации или загрузки и confidence. Это позволяет отделить официальные
+          данные от вторичных или ручных редакционных обновлений.
+        </p>
+      </header>
+      <article class="article-body">
+        <h2>Текущие семейства источников</h2>
+        <ul class="source-list">
+          <li><a href="https://www.cdc.gov/hantavirus/" rel="nofollow noopener">CDC</a>: публичные материалы по hantavirus и case data.</li>
+          <li><a href="https://www.ecdc.europa.eu/en/hantavirus-infection" rel="nofollow noopener">ECDC</a>: европейские эпидемиологические отчеты.</li>
+          <li><a href="https://www.who.int/emergencies/disease-outbreak-news" rel="nofollow noopener">WHO Disease Outbreak News</a>: сообщения об очагах.</li>
+          <li>Ручные новости: проверенные редактором локальные обновления с явной пометкой manual.</li>
+        </ul>
+        <h2>Confidence</h2>
+        <p>
+          Значение official используется для первичных официальных публикаций. official_report_derived
+          означает, что запись извлечена из официального отчета. secondary_verified применяется к
+          ручным обновлениям после редакционной проверки. modelled и manual_review_required не должны
+          попадать в публичные метрики без дополнительного контекста.
+        </p>
+        <h2>Лицензирование</h2>
+        <p>
+          Производные открытые наборы публикуются как CC BY 4.0, если исходный источник не устанавливает
+          более строгие условия. При цитировании нужно указывать исходный источник и дату доступа.
+        </p>
+      </article>
+      <footer class="article-footer">
+        <div class="footer-grid">
+          <section>
+            <h2>Экспорт</h2>
+            <p>Публичные API возвращают GeoJSON и JSON для карты, статистики, очагов и новостей.</p>
+          </section>
+          <section>
+            <h2>Контроль</h2>
+            <p>Схемы Pydantic и тесты контрактов проверяют обязательные поля перед публикацией.</p>
+          </section>
+          <section>
+            <h2>Обновление</h2>
+            <p>Последнее изменение страницы: 2026-05-13. Версия: 0.1.0.</p>
+          </section>
+        </div>
+      </footer>
     </main>
   </body>
 </html>

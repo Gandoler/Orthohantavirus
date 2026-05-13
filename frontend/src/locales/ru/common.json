@@ -1,0 +1,65 @@
+{
+  "brand": {
+    "formal": "Ортхохантавирус.рф",
+    "short": "Hanta Monitor",
+    "eyebrow": "Карта наблюдения",
+    "tagline": "Подтвержденные случаи, очаги и официальные обновления",
+    "mobileTitle": "Карта наблюдения"
+  },
+  "actions": {
+    "showFeed": "Показать ленту",
+    "hideFeed": "Скрыть ленту",
+    "refresh": "Обновить",
+    "refreshData": "Обновить данные",
+    "save": "Сохранить",
+    "reload": "Перезагрузить",
+    "delete": "Удалить",
+    "publish": "Опубликовать",
+    "openMap": "Открыть карту",
+    "readUpdate": "Открыть обновление",
+    "light": "Светлая",
+    "dark": "Темная",
+    "close": "Закрыть"
+  },
+  "status": {
+    "liveApi": "Live API",
+    "loading": "Загрузка",
+    "apiFallback": "Резервные данные",
+    "sampleData": "Пример данных",
+    "officialSourceFirst": "Сначала официальные источники",
+    "updated": "Обновлено {{date}}",
+    "unknown": "Неизвестно"
+  },
+  "language": {
+    "label": "Язык интерфейса",
+    "ru": "RU",
+    "en": "EN",
+    "switchToRu": "Переключить на русский",
+    "switchToEn": "Switch to English"
+  },
+  "footer": {
+    "project": "О проекте",
+    "sources": "Источники",
+    "methodology": "Методология",
+    "license": "Лицензия данных",
+    "contact": "Контакт",
+    "aboutText": "Карта подтвержденных случаев orthohantavirus, опубликованных официальными и проверенными источниками.",
+    "sourcesText": "CDC, ECDC, WHO Disease Outbreak News и ручные редакционные обновления с указанием происхождения.",
+    "methodologyText": "Каждая запись хранит источник, период, уровень уверенности и географическую точность.",
+    "licenseText": "Производные открытые данные публикуются как CC BY 4.0, если исходный источник не требует другого режима.",
+    "build": "Сборка {{version}}",
+    "deployed": "Деплой: {{date}}",
+    "status": "Статус",
+    "rss": "RSS",
+    "github": "GitHub",
+    "email": "contact@ортхохантавирус.рф"
+  },
+  "routes": {
+    "home": "Карта",
+    "about": "О проекте",
+    "methodology": "Методология",
+    "dataSources": "Источники данных",
+    "symptoms": "Симптомы",
+    "russia": "ГЛПС в России"
+  }
+}

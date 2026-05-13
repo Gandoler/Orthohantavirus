@@ -14,7 +14,7 @@ from shared.public_artifacts import (
     latest_manifest_generated_at,
     read_json_artifact,
 )
-from shared.seo import canonical_url, format_human_date, html_document, slug, xml_sitemap
+from shared.seo import canonical_url, format_human_date, html_document, localized_path, normalize_locale, slug, xml_sitemap
 from shared.storage import S3Storage
 
 settings = get_settings()
@@ -107,7 +107,9 @@ def sources() -> dict:
 
 
 @app.get("/countries/{country_code}", response_class=HTMLResponse)
-def country_page(country_code: str) -> HTMLResponse:
+@app.get("/{locale}/countries/{country_code}", response_class=HTMLResponse)
+def country_page(country_code: str, locale: str = "ru") -> HTMLResponse:
+    locale = normalize_locale(locale)
     storage = S3Storage(settings)
     regions = read_json_artifact(storage, "public/map/latest/regions.geojson", empty_feature_collection())
     feature = find_feature(regions, country_code)
@@ -120,41 +122,64 @@ def country_page(country_code: str) -> HTMLResponse:
     source_text = ", ".join(str(source).upper() for source in sources) or "public health sources"
     period_end = format_human_date(properties.get("period_end"))
     related_news = load_related_news(storage, region_code=region_code)
+    news_prefix = "/en/news" if locale == "en" else "/news"
     related_links = "".join(
-        f'<li><a href="/news/{slug(item.id)}">{escape(item.title)}</a></li>' for item in related_news[:8]
+        f'<li><a href="{news_prefix}/{slug(item.id)}">{escape(item.title)}</a></li>' for item in related_news[:8]
     )
-    description = (
-        f"{label} surveillance summary with {confirmed_cases} reported hantavirus cases, "
-        f"source attribution, related updates, and latest data freshness."
-    )
-    body = f"""
-        <p><strong>Region code:</strong> {escape(region_code)}</p>
-        <p><strong>Reported cases:</strong> {confirmed_cases}</p>
-        <p><strong>Deaths:</strong> {escape(str(deaths if deaths is not None else "not reported"))}</p>
-        <p><strong>Sources:</strong> {escape(source_text)}</p>
-        <p><strong>Reporting period end:</strong> {escape(period_end)}</p>
-        <h2>Related updates</h2>
-        <ul>{related_links or '<li><a href="/">Open the interactive map</a></li>'}</ul>
-    """
-    canonical = canonical_url(settings.app_public_base_url, f"/countries/{region_code}")
+    if locale == "en":
+        description = (
+            f"{label} surveillance summary with {confirmed_cases} reported hantavirus cases, "
+            f"source attribution, related updates, and latest data freshness."
+        )
+        body = f"""
+            <p><strong>Region code:</strong> {escape(region_code)}</p>
+            <p><strong>Reported cases:</strong> {confirmed_cases}</p>
+            <p><strong>Deaths:</strong> {escape(str(deaths if deaths is not None else "not reported"))}</p>
+            <p><strong>Sources:</strong> {escape(source_text)}</p>
+            <p><strong>Reporting period end:</strong> {escape(period_end)}</p>
+            <h2>Related updates</h2>
+            <ul>{related_links or '<li><a href="/en/">Open the interactive map</a></li>'}</ul>
+        """
+        title = f"{label} hantavirus surveillance | Orthohantavirus Monitor"
+        h1 = f"{label} hantavirus surveillance"
+    else:
+        description = (
+            f"Сводка наблюдения для {label}: опубликованные случаи хантавируса ({confirmed_cases}), "
+            f"атрибуция источников, связанные обновления и свежесть данных."
+        )
+        deaths_text = str(deaths if deaths is not None else "не указано")
+        body = f"""
+            <p><strong>Код региона:</strong> {escape(region_code)}</p>
+            <p><strong>Опубликованные случаи:</strong> {confirmed_cases}</p>
+            <p><strong>Летальные исходы:</strong> {escape(deaths_text)}</p>
+            <p><strong>Источники:</strong> {escape(source_text)}</p>
+            <p><strong>Конец отчетного периода:</strong> {escape(period_end)}</p>
+            <h2>Связанные обновления</h2>
+            <ul>{related_links or '<li><a href="/">Открыть интерактивную карту</a></li>'}</ul>
+        """
+        title = f"{label}: наблюдение по хантавирусу | Ортхохантавирус.рф"
+        h1 = f"{label}: наблюдение по хантавирусу"
+    canonical = canonical_url(settings.app_public_base_url, localized_path(f"/countries/{region_code}", locale))
     return HTMLResponse(
         html_document(
-            title=f"{label} hantavirus surveillance | Orthohantavirus Monitor",
+            title=title,
             description=description,
             canonical=canonical,
-            h1=f"{label} hantavirus surveillance",
+            h1=h1,
             body=body,
+            locale=locale,
             updated_at=period_end if period_end != "unknown" else None,
             structured_data={
                 "@context": "https://schema.org",
                 "@type": "Dataset",
-                "name": f"{label} hantavirus surveillance",
+                "name": h1,
                 "description": description,
                 "url": canonical,
+                "inLanguage": locale,
                 "dateModified": period_end,
                 "creator": {
                     "@type": "Organization",
-                    "name": "Orthohantavirus Monitor",
+                    "name": "Ортхохантавирус.рф" if locale == "ru" else "Orthohantavirus Monitor",
                 },
             },
         )
@@ -162,7 +187,9 @@ def country_page(country_code: str) -> HTMLResponse:
 
 
 @app.get("/outbreaks/{outbreak_id}", response_class=HTMLResponse)
-def outbreak_page(outbreak_id: str) -> HTMLResponse:
+@app.get("/{locale}/outbreaks/{outbreak_id}", response_class=HTMLResponse)
+def outbreak_page(outbreak_id: str, locale: str = "ru") -> HTMLResponse:
+    locale = normalize_locale(locale)
     storage = S3Storage(settings)
     outbreaks = read_json_artifact(storage, "public/map/latest/outbreaks.geojson", empty_feature_collection())
     feature = find_feature(outbreaks, outbreak_id)
@@ -174,30 +201,52 @@ def outbreak_page(outbreak_id: str) -> HTMLResponse:
     cases = properties.get("confirmed_cases")
     deaths = properties.get("deaths")
     location = str(properties.get("location_label") or "reported location")
-    description = (
-        f"{title}: verified outbreak report for {location}, with cases, deaths, source, and map links."
-    )
-    body = f"""
-        <p><strong>Status:</strong> {escape(str(properties.get("status") or "unknown"))}</p>
-        <p><strong>Location:</strong> {escape(location)}</p>
-        <p><strong>Reported:</strong> <time datetime="{escape(reported_at)}">{escape(reported_at)}</time></p>
-        <p><strong>Confirmed cases:</strong> {escape(str(cases if cases is not None else "not reported"))}</p>
-        <p><strong>Deaths:</strong> {escape(str(deaths if deaths is not None else "not reported"))}</p>
-        <p><strong>Source:</strong> <a href="{escape(source_url)}" rel="nofollow noopener">{escape(source)}</a></p>
-        <h2>Follow-up</h2>
-        <ul>
-          <li><a href="/">Open this outbreak on the interactive map</a></li>
-          <li><a href="/data-sources/">Review data sources and confidence levels</a></li>
-        </ul>
-    """
-    canonical = canonical_url(settings.app_public_base_url, f"/outbreaks/{outbreak_id}")
+    if locale == "en":
+        description = (
+            f"{title}: verified outbreak report for {location}, with cases, deaths, source, and map links."
+        )
+        body = f"""
+            <p><strong>Status:</strong> {escape(str(properties.get("status") or "unknown"))}</p>
+            <p><strong>Location:</strong> {escape(location)}</p>
+            <p><strong>Reported:</strong> <time datetime="{escape(reported_at)}">{escape(reported_at)}</time></p>
+            <p><strong>Confirmed cases:</strong> {escape(str(cases if cases is not None else "not reported"))}</p>
+            <p><strong>Deaths:</strong> {escape(str(deaths if deaths is not None else "not reported"))}</p>
+            <p><strong>Source:</strong> <a href="{escape(source_url)}" rel="nofollow noopener">{escape(source)}</a></p>
+            <h2>Follow-up</h2>
+            <ul>
+              <li><a href="/en/">Open this outbreak on the interactive map</a></li>
+              <li><a href="/en/data-sources/">Review data sources and confidence levels</a></li>
+            </ul>
+        """
+        page_title = f"{title} | Orthohantavirus Monitor"
+    else:
+        description = (
+            f"{title}: проверенное сообщение об очаге для {location} с числом случаев, "
+            f"летальными исходами, источником и ссылками на карту."
+        )
+        body = f"""
+            <p><strong>Статус:</strong> {escape(str(properties.get("status") or "unknown"))}</p>
+            <p><strong>Место:</strong> {escape(location)}</p>
+            <p><strong>Сообщено:</strong> <time datetime="{escape(reported_at)}">{escape(reported_at)}</time></p>
+            <p><strong>Подтвержденные случаи:</strong> {escape(str(cases if cases is not None else "не указано"))}</p>
+            <p><strong>Летальные исходы:</strong> {escape(str(deaths if deaths is not None else "не указано"))}</p>
+            <p><strong>Источник:</strong> <a href="{escape(source_url)}" rel="nofollow noopener">{escape(source)}</a></p>
+            <h2>Связанные действия</h2>
+            <ul>
+              <li><a href="/">Открыть очаг на интерактивной карте</a></li>
+              <li><a href="/data-sources/">Проверить источники и confidence</a></li>
+            </ul>
+        """
+        page_title = f"{title} | Ортхохантавирус.рф"
+    canonical = canonical_url(settings.app_public_base_url, localized_path(f"/outbreaks/{outbreak_id}", locale))
     return HTMLResponse(
         html_document(
-            title=f"{title} | Orthohantavirus Monitor",
+            title=page_title,
             description=description,
             canonical=canonical,
             h1=title,
             body=body,
+            locale=locale,
             updated_at=reported_at if reported_at != "unknown" else None,
             structured_data={
                 "@context": "https://schema.org",
@@ -206,6 +255,7 @@ def outbreak_page(outbreak_id: str) -> HTMLResponse:
                 "text": description,
                 "datePosted": reported_at,
                 "url": canonical,
+                "inLanguage": locale,
                 "category": "https://www.wikidata.org/wiki/Q735",
             },
         )

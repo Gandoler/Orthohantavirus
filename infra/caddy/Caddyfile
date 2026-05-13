@@ -25,11 +25,23 @@
 		reverse_proxy news-service:8001
 	}
 
+	handle /en/news/* {
+		reverse_proxy news-service:8001
+	}
+
 	handle /outbreaks/* {
 		reverse_proxy map-api:8000
 	}
 
+	handle /en/outbreaks/* {
+		reverse_proxy map-api:8000
+	}
+
 	handle /countries/* {
+		reverse_proxy map-api:8000
+	}
+
+	handle /en/countries/* {
 		reverse_proxy map-api:8000
 	}
 

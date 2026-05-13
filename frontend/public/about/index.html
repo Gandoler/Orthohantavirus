@@ -1,35 +1,115 @@
 <!doctype html>
-<html lang="en">
+<html lang="ru">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>About Orthohantavirus Monitor</title>
+    <title>О проекте | Ортхохантавирус.рф</title>
     <meta
       name="description"
-      content="About Orthohantavirus Monitor, an epidemiology dashboard for verified hantavirus case, outbreak, and news surveillance."
+      content="О проекте Ортхохантавирус.рф: карта подтвержденных случаев, очагов и проверенных обновлений по хантавирусным инфекциям."
     />
+    <meta name="robots" content="index,follow,max-image-preview:large" />
     <link rel="canonical" href="https://xn--80aagyweapgkddrtb.xn--p1ai/about/" />
+    <link rel="alternate" hreflang="ru" href="https://xn--80aagyweapgkddrtb.xn--p1ai/about/" />
+    <link rel="alternate" hreflang="en" href="https://xn--80aagyweapgkddrtb.xn--p1ai/en/about/" />
+    <link rel="alternate" hreflang="x-default" href="https://xn--80aagyweapgkddrtb.xn--p1ai/about/" />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
     <link rel="stylesheet" href="/static-page.css" />
+    <meta property="og:type" content="article" />
+    <meta property="og:locale" content="ru_RU" />
+    <meta property="og:locale:alternate" content="en_US" />
+    <meta property="og:title" content="О проекте | Ортхохантавирус.рф" />
+    <meta property="og:description" content="Карта подтвержденных случаев, очагов и проверенных обновлений по хантавирусным инфекциям." />
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "MedicalWebPage",
+        "name": "О проекте Ортхохантавирус.рф",
+        "inLanguage": "ru",
+        "about": {
+          "@type": "MedicalCondition",
+          "name": "Хантавирусные инфекции",
+          "cause": "Orthohantavirus",
+          "riskFactor": ["контакт с выделениями грызунов", "профессиональный или бытовой контакт с зараженной пылью"]
+        },
+        "publisher": {
+          "@type": "Organization",
+          "name": "Ортхохантавирус.рф"
+        }
+      }
+    </script>
   </head>
   <body>
-    <main class="static-page">
-      <p class="eyebrow">Orthohantavirus Monitor</p>
-      <h1>About the project</h1>
-      <p>
-        Orthohantavirus Monitor is a surveillance dashboard for tracking verified hantavirus
-        case aggregates, outbreak reports, and public health news in one map-first interface.
-      </p>
-      <h2>What the site shows</h2>
-      <p>
-        The monitor separates reported case aggregates, outbreak events, and editorially reviewed
-        news updates. The interactive map is a client-side layer, while this page and the public
-        surveillance pages are plain HTML for search indexing and accessibility.
-      </p>
-      <nav>
-        <a href="/">Interactive map</a>
-        <a href="/methodology/">Methodology</a>
-        <a href="/data-sources/">Data sources</a>
+    <main class="article-shell">
+      <nav class="top-nav" aria-label="Навигация">
+        <a class="brand" href="/">
+          <img src="/favicon.svg" width="28" height="28" alt="" />
+          <span>Ортхохантавирус.рф</span>
+        </a>
+        <div class="nav-links">
+          <a href="/methodology/">Методология</a>
+          <a href="/data-sources/">Источники данных</a>
+          <a class="lang-link" href="/en/about/">EN</a>
+        </div>
       </nav>
+      <header class="article-header">
+        <p class="eyebrow">О проекте</p>
+        <h1>Карта официальных данных по хантавирусам</h1>
+        <p class="abstract">
+          Ортхохантавирус.рф собирает опубликованные сведения о случаях, очагах и обновлениях
+          органов здравоохранения в одном интерфейсе. Задача проекта - показать происхождение
+          каждого числа: источник, период наблюдения, дату обновления и уровень уверенности.
+        </p>
+      </header>
+      <article class="article-body">
+        <h2>Что показывает карта</h2>
+        <p>
+          Главная страница разделяет три типа записей: агрегированные случаи по регионам, сообщения
+          об очагах и редакционно проверенные новости. Карта помогает увидеть географию данных, но
+          не заменяет официальные рекомендации органов здравоохранения.
+        </p>
+        <blockquote>
+          <p>
+            Любое число на карте сопровождается источником и периодом. Если запись не имеет
+            достаточной атрибуции, она не должна попадать в публичный слой наблюдения.
+          </p>
+        </blockquote>
+        <h2>Для кого сделан проект</h2>
+        <p>
+          Интерфейс рассчитан на журналистов, исследователей, студентов, специалистов по
+          общественному здравоохранению и читателей, которым нужен спокойный обзор опубликованных
+          данных без тревожной подачи. Для медицинских решений следует обращаться к врачу и
+          локальным органам здравоохранения.
+        </p>
+        <h2>Принципы данных</h2>
+        <ul class="source-list">
+          <li>приоритет имеют официальные источники: CDC, ECDC, WHO и национальные ведомства;</li>
+          <li>каждая запись хранит ссылку на источник, дату публикации или выгрузки и confidence;</li>
+          <li>ручные новости отделены от результатов автоматической загрузки;</li>
+          <li>географическая точность явно указана: страна, регион, событие или точка.</li>
+        </ul>
+        <p class="citation">
+          Опорные справочные источники: <a href="https://www.cdc.gov/hantavirus/" rel="nofollow noopener">CDC Hantavirus</a>,
+          <a href="https://www.ecdc.europa.eu/en/hantavirus-infection" rel="nofollow noopener">ECDC</a>,
+          <a href="https://www.who.int/" rel="nofollow noopener">WHO</a>.
+        </p>
+      </article>
+      <footer class="article-footer">
+        <div class="footer-grid">
+          <section>
+            <h2>Источники</h2>
+            <p>CDC, ECDC, WHO Disease Outbreak News и проверенные ручные обновления.</p>
+          </section>
+          <section>
+            <h2>Лицензия</h2>
+            <p>Производные открытые данные: CC BY 4.0, если источник не требует другого режима.</p>
+          </section>
+          <section>
+            <h2>Обновление</h2>
+            <p>Последнее изменение страницы: 2026-05-13. Версия: 0.1.0.</p>
+          </section>
+        </div>
+      </footer>
     </main>
   </body>
 </html>

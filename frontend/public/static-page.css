@@ -1,75 +1,265 @@
 :root {
   color-scheme: light dark;
   font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  background: #f5f7f4;
-  color: #12201b;
+  font-feature-settings: "ss01", "cv11", "tnum";
+  background: #fafaf8;
+  color: #0f1411;
 }
 
 body {
   margin: 0;
   min-height: 100vh;
-  background: linear-gradient(180deg, #f5f7f4 0%, #eaf3f2 100%);
+  background: #fafaf8;
 }
 
-.static-page {
-  max-width: 860px;
+.article-shell {
+  max-width: 1040px;
   margin: 0 auto;
-  padding: 48px 20px 64px;
+  padding: 28px 20px 56px;
+}
+
+.article-header,
+.article-body,
+.article-footer {
+  max-width: 720px;
+}
+
+.top-nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px 18px;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 48px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid #e1e5e1;
+}
+
+.brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  color: #0f1411;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.brand svg,
+.brand img {
+  width: 28px;
+  height: 28px;
+}
+
+.nav-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  color: #53615a;
+  font-size: 0.92rem;
+}
+
+.lang-link {
+  border-bottom: 2px solid #0b5946;
+  color: #0f1411;
+  font-weight: 700;
 }
 
 .eyebrow {
   margin: 0 0 12px;
-  color: #0f766e;
-  font-weight: 800;
-  letter-spacing: .08em;
-  text-transform: uppercase;
+  color: #53615a;
+  font-size: 0.84rem;
+  font-weight: 650;
+  letter-spacing: 0;
+}
+
+h1,
+h2,
+h3 {
+  font-family: "IBM Plex Sans", Inter, ui-sans-serif, system-ui, sans-serif;
+  letter-spacing: 0;
 }
 
 h1 {
   margin: 0 0 18px;
-  font-size: clamp(2rem, 5vw, 3.6rem);
+  font-size: clamp(2.25rem, 7vw, 4.3rem);
   line-height: 1.02;
-  letter-spacing: 0;
+  font-weight: 600;
+}
+
+.abstract {
+  margin: 0 0 28px;
+  color: #3d4943;
+  font-size: 1.1rem;
+  line-height: 1.7;
+}
+
+.article-body {
+  display: grid;
+  gap: 20px;
 }
 
 h2 {
-  margin-top: 34px;
+  margin: 22px 0 0;
+  font-size: 1.45rem;
+  line-height: 1.25;
+}
+
+h3 {
+  margin: 10px 0 0;
+  font-size: 1.08rem;
 }
 
 p,
 li {
-  max-width: 70ch;
-  color: #38524c;
-  line-height: 1.72;
+  color: #3d4943;
+  line-height: 1.68;
 }
 
-nav {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 14px;
-  margin-top: 32px;
+p,
+ul,
+ol {
+  margin: 0;
 }
 
 a {
-  color: #0f6b65;
+  color: #0b5946;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 3px;
+}
+
+blockquote,
+.citation,
+.faq,
+.source-list,
+.meta-panel {
+  border: 1px solid #e1e5e1;
+  border-radius: 8px;
+  background: #fffffd;
+  padding: 16px 18px;
+}
+
+blockquote {
+  margin: 6px 0;
+  border-left: 3px solid #0b5946;
+}
+
+blockquote p {
+  color: #0f1411;
+}
+
+.citation {
+  color: #53615a;
+  font-size: 0.92rem;
+}
+
+.source-list {
+  display: grid;
+  gap: 10px;
+}
+
+.source-list li {
+  margin-left: 18px;
+}
+
+.article-footer {
+  display: grid;
+  gap: 14px;
+  margin-top: 34px;
+  padding-top: 18px;
+  border-top: 1px solid #e1e5e1;
+  color: #53615a;
+  font-size: 0.9rem;
+}
+
+.footer-grid {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.footer-grid h2 {
+  margin: 0 0 4px;
+  font-size: 0.92rem;
+}
+
+.footer-grid p {
+  font-size: 0.84rem;
+}
+
+@media (max-width: 760px) {
+  .article-shell {
+    padding: 20px 16px 44px;
+  }
+
+  .top-nav {
+    margin-bottom: 34px;
+  }
+
+  .footer-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media print {
+  body {
+    background: #ffffff;
+  }
+
+  .article-shell {
+    max-width: none;
+    padding: 0;
+  }
+
+  .top-nav,
+  .lang-link {
+    display: none;
+  }
+
+  .article-header,
+  .article-body,
+  .article-footer {
+    max-width: none;
+  }
 }
 
 @media (prefers-color-scheme: dark) {
-  :root {
-    background: #0b1413;
-    color: #edf5f2;
-  }
-
+  :root,
   body {
-    background: linear-gradient(180deg, #0b1413 0%, #101f22 100%);
+    background: #0e1311;
+    color: #e7ebe7;
   }
 
+  .top-nav,
+  .article-footer {
+    border-color: #2a332e;
+  }
+
+  .brand,
+  .lang-link,
+  h1,
+  blockquote p {
+    color: #e7ebe7;
+  }
+
+  .nav-links,
+  .eyebrow,
   p,
-  li {
-    color: #b6c9c4;
+  li,
+  .citation,
+  .article-footer {
+    color: #a8b4ad;
   }
 
   a {
-    color: #5eead4;
+    color: #3fb28a;
+  }
+
+  blockquote,
+  .citation,
+  .faq,
+  .source-list,
+  .meta-panel {
+    background: #141917;
+    border-color: #2a332e;
   }
 }

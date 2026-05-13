@@ -98,16 +98,16 @@ test.beforeEach(async ({ page }) => {
   await page.route("https://tile.openstreetmap.org/**", (route) =>
     route.fulfill({ status: 204, body: "" }),
   );
-  await page.route("http://localhost:8000/v1/map/regions", (route) =>
+  await page.route("http://localhost:8000/v1/map/regions**", (route) =>
     route.fulfill({ json: regions }),
   );
-  await page.route("http://localhost:8000/v1/map/outbreaks", (route) =>
+  await page.route("http://localhost:8000/v1/map/outbreaks**", (route) =>
     route.fulfill({ json: outbreaks }),
   );
-  await page.route("http://localhost:8000/v1/stats/summary", (route) =>
+  await page.route("http://localhost:8000/v1/stats/summary**", (route) =>
     route.fulfill({ json: summary }),
   );
-  await page.route("http://localhost:8001/v1/news", (route) => route.fulfill({ json: news }));
+  await page.route("http://localhost:8001/v1/news**", (route) => route.fulfill({ json: news }));
   await page.route("http://localhost:8001/v1/admin/news", async (route) => {
     if (route.request().method() === "POST") {
       const payload = route.request().postDataJSON();
@@ -136,34 +136,60 @@ test.beforeEach(async ({ page }) => {
 test("renders the map workspace and news feed", async ({ page }) => {
   await page.goto("/");
 
-  await expect(page.getByRole("heading", { name: "Cases, outbreaks, and verified updates" })).toBeVisible();
-  await expect(page.getByText("Live API")).toBeVisible();
-  await expect(page.getByLabel("News feed")).toContainText("Hantavirus outbreak update");
-  await expect(page.getByLabel("Selected region")).toContainText("Arizona");
-  await expect(page.locator(".map-container canvas, .fallback-map")).toBeVisible();
-  await expect(page.getByRole("button", { name: "Cases" })).toBeVisible();
-  await expect(page.getByRole("button", { name: "Outbreaks" })).toBeVisible();
-  await expect(page.getByRole("button", { name: "Heatmap" })).toBeVisible();
-  await expect(page.getByRole("button", { name: "News" })).toBeVisible();
-
-  const newsPanelBox = await page.getByLabel("News feed").boundingBox();
-  expect(newsPanelBox?.width).toBeGreaterThan(240);
+  await expect(page.locator(".map-topbar__brand strong")).toContainText("Подтвержденные случаи");
+  await expect(page.locator(".data-pill")).toContainText("Live API");
+  await expect(page.getByLabel("Лента новостей")).toContainText("Hantavirus outbreak update");
   const viewport = page.viewportSize();
+  if (viewport && viewport.width < 900) {
+    await expect(page.locator(".region-pill")).toContainText("Arizona");
+  } else {
+    await expect(page.getByLabel("Выбранный регион")).toContainText("Arizona");
+  }
+  await expect(page.locator(".map-container canvas, .fallback-map")).toBeVisible();
+  await expect(page.getByRole("button", { name: "Случаи" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Очаги" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Теплокарта" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Новости" })).toBeVisible();
+
+  const newsPanelBox = await page.getByLabel("Лента новостей").boundingBox();
+  expect(newsPanelBox?.width).toBeGreaterThan(240);
   if (viewport && viewport.width >= 900) {
     expect(newsPanelBox?.x).toBeLessThan(5);
   }
+});
+
+test("keeps the root path Russian even when English was selected before", async ({ page }) => {
+  await page.addInitScript(() => {
+    localStorage.setItem("orthohantavirus-locale", "en");
+    document.cookie = "orthohantavirus-locale=en; Path=/";
+  });
+
+  await page.goto("/");
+
+  await expect(page).toHaveURL(/\/$/);
+  await expect(page.locator("html")).toHaveAttribute("lang", "ru");
+  await expect(page.locator(".map-topbar__brand strong")).toContainText("Подтвержденные случаи");
+  await expect(page.getByRole("button", { name: "Случаи" })).toBeVisible();
+});
+
+test("opens the English route only when the URL has the en prefix", async ({ page }) => {
+  await page.goto("/en/");
+
+  await expect(page.locator("html")).toHaveAttribute("lang", "en");
+  await expect(page.locator(".map-topbar__brand strong")).toContainText("Verified cases");
+  await expect(page.getByRole("button", { name: "Cases" })).toBeVisible();
 });
 
 test("supports dark mode, layer toggles, and map gestures", async ({ page }) => {
   await page.addInitScript(() => localStorage.setItem("orthohantavirus-theme", "light"));
   await page.goto("/");
 
-  await page.getByRole("button", { name: "Dark" }).click();
+  await page.getByRole("button", { name: "Темная" }).click();
   await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
 
-  await page.getByRole("button", { name: "Heatmap" }).click();
-  await page.getByRole("button", { name: "News" }).click();
-  await expect(page.locator(".toolbar-title strong")).toHaveText("Cases, Outbreaks");
+  await page.getByRole("button", { name: "Теплокарта" }).click();
+  await page.getByRole("button", { name: "Новости" }).click();
+  await expect(page.getByRole("button", { name: "Теплокарта" })).not.toHaveClass(/layer-button--active/);
 
   const map = page.locator(".map-container canvas, .fallback-map").first();
   await expect(map).toBeVisible();
@@ -185,18 +211,38 @@ test("supports dark mode, layer toggles, and map gestures", async ({ page }) => 
 test("creates a manual news item from the admin console", async ({ page }) => {
   await page.goto("/admin");
 
-  await expect(page.getByRole("heading", { name: "Manual news publishing" })).toBeVisible();
-  await expect(page.getByLabel("Manual news items")).toContainText("Manual local update");
+  await expect(page.getByRole("heading", { name: "Ручная публикация новостей" })).toBeVisible();
+  await expect(page.getByLabel("Ручная лента")).toContainText("Manual local update");
 
-  await page.getByLabel("Admin API token").fill("local-token");
-  await page.getByRole("button", { name: "Save" }).click();
-  await page.getByLabel("Title").fill("Региональная новость");
-  await page.getByLabel("Summary").fill("Короткое ручное обновление для ленты.");
-  await page.getByLabel("Source URL").fill("https://example.com/regional-news");
-  await page.getByLabel("Tags").fill("manual, russia");
-  await page.getByLabel("Region codes").fill("RU-MOW");
-  await page.getByRole("button", { name: "Publish news" }).click();
+  await page.getByLabel("Админ API токен").fill("local-token");
+  await page.getByRole("button", { name: "Сохранить" }).click();
+  await page.getByLabel("Заголовок").fill("Региональная новость");
+  await page.getByLabel("Краткое описание").fill("Короткое ручное обновление для ленты.");
+  await page.getByLabel("URL источника").fill("https://example.com/regional-news");
+  await page.getByLabel("Теги").fill("manual, russia");
+  await page.getByLabel("Коды регионов").fill("RU-MOW");
+  await page.getByRole("button", { name: "Опубликовать новость" }).click();
 
-  await expect(page.getByRole("status")).toContainText("Published");
-  await expect(page.getByLabel("Manual news items")).toContainText("Региональная новость");
+  await expect(page.getByRole("status")).toContainText("Опубликовано");
+  await expect(page.getByLabel("Ручная лента")).toContainText("Региональная новость");
+});
+
+test("switches locale without dropping the selected map state", async ({ page }) => {
+  await page.goto("/");
+
+  const viewport = page.viewportSize();
+  if (viewport && viewport.width < 900) {
+    await expect(page.locator(".region-pill")).toContainText("Arizona");
+  } else {
+    await expect(page.getByLabel("Выбранный регион")).toContainText("Arizona");
+  }
+  await page.getByRole("button", { name: "EN" }).click();
+  await expect(page).toHaveURL(/\/en\//);
+  await expect(page.locator("html")).toHaveAttribute("lang", "en");
+  if (viewport && viewport.width < 900) {
+    await expect(page.locator(".region-pill")).toContainText("Arizona");
+  } else {
+    await expect(page.getByLabel("Selected region")).toContainText("Arizona");
+  }
+  await expect(page.getByRole("button", { name: "Cases" })).toBeVisible();
 });

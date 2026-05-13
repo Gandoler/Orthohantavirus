@@ -13,6 +13,8 @@ Implemented:
 - CDC, ECDC, and WHO ingestion adapters;
 - public S3/MinIO artifact generation;
 - MapLibre frontend with map layers, region details, source links, and news panel;
+- Russian-default i18n with `/en/` English routes, language switcher, hreflang, and localized SEO metadata;
+- article-style public pages for about, methodology, and data sources;
 - Umami analytics integration;
 - Loki/Grafana/Alloy log stack;
 - production Compose/Caddy/runbook scripts;
@@ -39,6 +41,7 @@ Local URLs:
 
 ```text
 frontend:     http://localhost:5173
+frontend EN:  http://localhost:5173/en/
 map-api:      http://localhost:8000
 news-service: http://localhost:8001
 minio:        http://localhost:19000
@@ -74,6 +77,16 @@ Frontend:
 cd frontend
 pnpm install
 pnpm build
+pnpm test
+```
+
+Locale checks:
+
+```text
+/                    Russian map interface
+/en/                 English map interface
+/methodology/        Russian article page
+/en/methodology/     English article page
 ```
 
 ## Production

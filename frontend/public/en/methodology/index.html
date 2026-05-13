@@ -1,0 +1,101 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Methodology | Orthohantavirus Monitor</title>
+    <meta
+      name="description"
+      content="How Orthohantavirus Monitor ingests, normalizes, verifies, and publishes hantavirus surveillance data."
+    />
+    <meta name="robots" content="index,follow,max-image-preview:large" />
+    <link rel="canonical" href="https://xn--80aagyweapgkddrtb.xn--p1ai/en/methodology/" />
+    <link rel="alternate" hreflang="ru" href="https://xn--80aagyweapgkddrtb.xn--p1ai/methodology/" />
+    <link rel="alternate" hreflang="en" href="https://xn--80aagyweapgkddrtb.xn--p1ai/en/methodology/" />
+    <link rel="alternate" hreflang="x-default" href="https://xn--80aagyweapgkddrtb.xn--p1ai/methodology/" />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="/static-page.css" />
+    <meta property="og:type" content="article" />
+    <meta property="og:locale" content="en_US" />
+    <meta property="og:locale:alternate" content="ru_RU" />
+    <meta property="og:title" content="Methodology | Orthohantavirus Monitor" />
+    <meta property="og:description" content="How hantavirus surveillance data is ingested, normalized, verified, and published." />
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "MedicalWebPage",
+        "name": "Orthohantavirus Monitor methodology",
+        "inLanguage": "en",
+        "about": {"@type": "MedicalCondition", "name": "Hantavirus infections", "code": [{"@type": "MedicalCode", "codingSystem": "ICD-10", "codeValue": "A98.5"}]},
+        "publisher": {"@type": "Organization", "name": "Orthohantavirus Monitor"}
+      }
+    </script>
+  </head>
+  <body>
+    <main class="article-shell">
+      <nav class="top-nav" aria-label="Navigation">
+        <a class="brand" href="/en/">
+          <img src="/favicon.svg" width="28" height="28" alt="" />
+          <span>Orthohantavirus Monitor</span>
+        </a>
+        <div class="nav-links">
+          <a href="/en/about/">About</a>
+          <a href="/en/data-sources/">Data sources</a>
+          <a class="lang-link" href="/methodology/">RU</a>
+        </div>
+      </nav>
+      <header class="article-header">
+        <p class="eyebrow">Methodology</p>
+        <h1>How surveillance data is prepared</h1>
+        <p class="abstract">
+          Data moves from source material to the public map through ingestion, extraction,
+          normalization into shared contracts, validation, and publication as GeoJSON and JSON
+          artifacts for APIs and indexable HTML pages.
+        </p>
+      </header>
+      <article class="article-body">
+        <h2>1. Source and extraction</h2>
+        <p>
+          Adapters read public material from CDC, ECDC, WHO Disease Outbreak News, and reviewed
+          editorial entries. Each record keeps source, source URL, fetch date, publication date,
+          confidence, and data type.
+        </p>
+        <h2>2. Normalization</h2>
+        <p>
+          Sources differ in periods, geography, and table shape. The pipeline normalizes them into
+          case aggregate, outbreak event, news item, and region contracts. The public map uses only
+          fields that pass contract validation.
+        </p>
+        <h2>3. Geography and precision</h2>
+        <p>
+          Geocoding should not imply more precision than a source provides. A country-level record
+          is not rendered as a precise point. The precision field states country, admin1, admin2,
+          event, point, or unknown.
+        </p>
+        <div class="faq">
+          <h2>FAQ</h2>
+          <h3>Is this medical advice?</h3>
+          <p>No. The project shows published surveillance data and source links.</p>
+          <h3>Why can a record be absent from the map layer?</h3>
+          <p>If the source does not provide enough geography, the record remains in data but is not drawn as a point.</p>
+        </div>
+      </article>
+      <footer class="article-footer">
+        <div class="footer-grid">
+          <section>
+            <h2>Changelog</h2>
+            <p>2026-05-13: locales, hreflang, sourced metrics, and article layout added.</p>
+          </section>
+          <section>
+            <h2>Contact</h2>
+            <p><a href="mailto:contact@orthohantavirus.example">contact@orthohantavirus.example</a></p>
+          </section>
+          <section>
+            <h2>Related</h2>
+            <p><a href="/en/data-sources/">Data sources</a> and <a href="/en/">interactive map</a>.</p>
+          </section>
+        </div>
+      </footer>
+    </main>
+  </body>
+</html>

@@ -19,7 +19,7 @@ from shared.news_store import (
 )
 from shared.observability import configure_json_logging, install_access_log_middleware
 from shared.public_artifacts import latest_manifest_generated_at
-from shared.seo import canonical_url, format_human_date, html_document, slug
+from shared.seo import canonical_url, format_human_date, html_document, localized_path, normalize_locale, slug
 from shared.storage import S3Storage
 
 settings = get_settings()
@@ -96,7 +96,9 @@ def news_feed(
     limit: int = Query(default=50, ge=1, le=100),
     tag: str | None = None,
     source: str | None = None,
+    lang: str | None = None,
 ) -> list[NewsItem]:
+    _ = normalize_locale(lang)
     items = load_merged_news_items(S3Storage(settings))
     if tag is not None:
         items = [item for item in items if tag in item.tags]
@@ -119,40 +121,63 @@ def news_item(news_id: str) -> NewsItem:
 
 
 @app.get("/news/{news_id}", response_class=HTMLResponse)
-def public_news_page(news_id: str) -> HTMLResponse:
+@app.get("/{locale}/news/{news_id}", response_class=HTMLResponse)
+def public_news_page(news_id: str, locale: str = "ru") -> HTMLResponse:
+    locale = normalize_locale(locale)
     item = find_news_item(news_id)
     published = format_human_date(item.published_at or item.fetched_at)
-    description = item.summary or (
+    fallback_description = (
         f"Verified {item.source.upper()} update for Orthohantavirus Monitor, published {published}."
+        if locale == "en"
+        else f"Проверенное обновление {item.source.upper()} для Ортхохантавирус.рф, опубликовано {published}."
     )
+    description = item.summary or fallback_description
+    country_prefix = "/en/countries" if locale == "en" else "/countries"
+    outbreak_prefix = "/en/outbreaks" if locale == "en" else "/outbreaks"
     related_regions = "".join(
-        f'<li><a href="/countries/{slug(region_code)}">{escape(region_code)}</a></li>'
+        f'<li><a href="{country_prefix}/{slug(region_code)}">{escape(region_code)}</a></li>'
         for region_code in item.related_region_codes
     )
     related_outbreaks = "".join(
-        f'<li><a href="/outbreaks/{slug(outbreak_id)}">{escape(outbreak_id)}</a></li>'
+        f'<li><a href="{outbreak_prefix}/{slug(outbreak_id)}">{escape(outbreak_id)}</a></li>'
         for outbreak_id in item.related_outbreak_ids
     )
     tags = ", ".join(item.tags) if item.tags else "surveillance"
-    body = f"""
-        <p><strong>Source:</strong> <a href="{escape(str(item.source_url))}" rel="nofollow noopener">{escape(item.source.upper())}</a></p>
-        <p><strong>Published:</strong> <time datetime="{escape(published)}">{escape(published)}</time></p>
-        <p><strong>Tags:</strong> {escape(tags)}</p>
-        <p>{escape(description)}</p>
-        <h2>Related surveillance records</h2>
-        <ul>
-          {related_regions or '<li><a href="/">Open the interactive map</a></li>'}
-          {related_outbreaks}
-        </ul>
-    """
-    canonical = canonical_url(settings.app_public_base_url, f"/news/{news_id}")
+    if locale == "en":
+        body = f"""
+            <p><strong>Source:</strong> <a href="{escape(str(item.source_url))}" rel="nofollow noopener">{escape(item.source.upper())}</a></p>
+            <p><strong>Published:</strong> <time datetime="{escape(published)}">{escape(published)}</time></p>
+            <p><strong>Tags:</strong> {escape(tags)}</p>
+            <p>{escape(description)}</p>
+            <h2>Related surveillance records</h2>
+            <ul>
+              {related_regions or '<li><a href="/en/">Open the interactive map</a></li>'}
+              {related_outbreaks}
+            </ul>
+        """
+        page_title = f"{item.title} | Orthohantavirus Monitor"
+    else:
+        body = f"""
+            <p><strong>Источник:</strong> <a href="{escape(str(item.source_url))}" rel="nofollow noopener">{escape(item.source.upper())}</a></p>
+            <p><strong>Опубликовано:</strong> <time datetime="{escape(published)}">{escape(published)}</time></p>
+            <p><strong>Теги:</strong> {escape(tags)}</p>
+            <p>{escape(description)}</p>
+            <h2>Связанные записи наблюдения</h2>
+            <ul>
+              {related_regions or '<li><a href="/">Открыть интерактивную карту</a></li>'}
+              {related_outbreaks}
+            </ul>
+        """
+        page_title = f"{item.title} | Ортхохантавирус.рф"
+    canonical = canonical_url(settings.app_public_base_url, localized_path(f"/news/{news_id}", locale))
     return HTMLResponse(
         html_document(
-            title=f"{item.title} | Orthohantavirus Monitor",
+            title=page_title,
             description=description,
             canonical=canonical,
             h1=item.title,
             body=body,
+            locale=locale,
             updated_at=published,
             structured_data={
                 "@context": "https://schema.org",
@@ -162,10 +187,11 @@ def public_news_page(news_id: str) -> HTMLResponse:
                 "datePublished": published,
                 "dateModified": format_human_date(item.fetched_at),
                 "url": canonical,
+                "inLanguage": locale,
                 "isAccessibleForFree": True,
                 "publisher": {
                     "@type": "Organization",
-                    "name": "Orthohantavirus Monitor",
+                    "name": "Ортхохантавирус.рф" if locale == "ru" else "Orthohantavirus Monitor",
                 },
             },
         )

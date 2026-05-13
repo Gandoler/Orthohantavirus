@@ -1,0 +1,70 @@
+{
+  "aria": {
+    "newsFeed": "News feed",
+    "dataTrust": "Data trust and freshness",
+    "summary": "Summary",
+    "summaryLoading": "Summary loading",
+    "feedFilters": "News filters",
+    "officialNews": "Official news",
+    "appHeader": "Application header",
+    "mapLayers": "Map layers",
+    "mapLegend": "Map legend",
+    "selectedRegion": "Selected region",
+    "compatibilityMap": "Compatibility map",
+    "worldGrid": "World grid",
+    "mapLoading": "Map loading"
+  },
+  "layers": {
+    "cases": "Cases",
+    "outbreaks": "Outbreaks",
+    "heatmap": "Heatmap",
+    "news": "News"
+  },
+  "legend": {
+    "cases": "Cases: confirmed aggregates since 1993",
+    "heatmap": "Heatmap: relative density of published cases",
+    "outbreaks": "Outbreaks: WHO and public health reports",
+    "news": "News: regions linked to updates"
+  },
+  "metrics": {
+    "reportedCases": "Reported cases",
+    "deaths": "Deaths",
+    "outbreakReports": "Outbreak reports",
+    "verifiedUpdates": "Verified updates",
+    "sourceLine": "Source: {{sources}}",
+    "periodLine": "Period: {{period}}",
+    "periodUnknown": "period pending",
+    "seriesSoon": "time series pending",
+    "loadingPeriod": "period loading"
+  },
+  "search": {
+    "aria": "Search news",
+    "placeholder": "Search verified updates",
+    "filterAria": "Filter news by source",
+    "allSources": "All sources"
+  },
+  "status": {
+    "loadingLayers": "Loading surveillance layers",
+    "apiUnavailable": "API unavailable. Showing sample data.",
+    "noGeocodedPoints": "No geocoded points are available for the current dataset.",
+    "webglUnavailable": "WebGL is unavailable in this browser. Showing the compatibility map.",
+    "mapCouldNotStart": "The interactive map could not start. Showing the compatibility map.",
+    "mapLibraryCouldNotLoad": "The map library could not load. Showing the compatibility map."
+  },
+  "region": {
+    "selected": "Selected region",
+    "showDetails": "Show details for {{region}}",
+    "hideDetails": "Hide region details",
+    "cases": "Cases",
+    "deaths": "Deaths",
+    "precision": "Precision",
+    "source": "Source",
+    "updated": "Updated {{date}}",
+    "caseTitle": "{{region}}: {{count}} cases"
+  },
+  "controls": {
+    "zoomIn": "Zoom in (+ / =)",
+    "zoomOut": "Zoom out (-)",
+    "resetNorth": "Reset north"
+  }
+}

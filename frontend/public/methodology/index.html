@@ -1,36 +1,112 @@
 <!doctype html>
-<html lang="en">
+<html lang="ru">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Methodology | Orthohantavirus Monitor</title>
+    <title>Методология | Ортхохантавирус.рф</title>
     <meta
       name="description"
-      content="How Orthohantavirus Monitor ingests, normalizes, verifies, and publishes hantavirus surveillance data."
+      content="Как Ортхохантавирус.рф собирает, нормализует, проверяет и публикует данные наблюдения по хантавирусам."
     />
+    <meta name="robots" content="index,follow,max-image-preview:large" />
     <link rel="canonical" href="https://xn--80aagyweapgkddrtb.xn--p1ai/methodology/" />
+    <link rel="alternate" hreflang="ru" href="https://xn--80aagyweapgkddrtb.xn--p1ai/methodology/" />
+    <link rel="alternate" hreflang="en" href="https://xn--80aagyweapgkddrtb.xn--p1ai/en/methodology/" />
+    <link rel="alternate" hreflang="x-default" href="https://xn--80aagyweapgkddrtb.xn--p1ai/methodology/" />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
     <link rel="stylesheet" href="/static-page.css" />
+    <meta property="og:type" content="article" />
+    <meta property="og:locale" content="ru_RU" />
+    <meta property="og:locale:alternate" content="en_US" />
+    <meta property="og:title" content="Методология | Ортхохантавирус.рф" />
+    <meta property="og:description" content="Как собираются, проверяются и публикуются данные наблюдения по хантавирусам." />
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "MedicalWebPage",
+        "name": "Методология данных Ортхохантавирус.рф",
+        "inLanguage": "ru",
+        "about": {
+          "@type": "MedicalCondition",
+          "name": "Хантавирусные инфекции",
+          "code": [{"@type": "MedicalCode", "codingSystem": "ICD-10", "codeValue": "A98.5"}],
+          "signOrSymptom": ["лихорадка", "респираторные симптомы", "почечные проявления"]
+        },
+        "publisher": {"@type": "Organization", "name": "Ортхохантавирус.рф"}
+      }
+    </script>
   </head>
   <body>
-    <main class="static-page">
-      <p class="eyebrow">Methodology</p>
-      <h1>How surveillance data is prepared</h1>
-      <p>
-        Data is collected from official and reviewed public health sources, normalized into shared
-        contracts, projected into GeoJSON and JSON feeds, then served through public APIs and
-        indexable HTML pages.
-      </p>
-      <h2>Quality rules</h2>
-      <ul>
-        <li>Official public health sources are preferred over secondary sources.</li>
-        <li>Each record keeps source, confidence, date, and geographic precision metadata.</li>
-        <li>Manual news items are stored separately and merged into the public feed.</li>
-      </ul>
-      <nav>
-        <a href="/">Interactive map</a>
-        <a href="/about/">About</a>
-        <a href="/data-sources/">Data sources</a>
+    <main class="article-shell">
+      <nav class="top-nav" aria-label="Навигация">
+        <a class="brand" href="/">
+          <img src="/favicon.svg" width="28" height="28" alt="" />
+          <span>Ортхохантавирус.рф</span>
+        </a>
+        <div class="nav-links">
+          <a href="/about/">О проекте</a>
+          <a href="/data-sources/">Источники данных</a>
+          <a class="lang-link" href="/en/methodology/">EN</a>
+        </div>
       </nav>
+      <header class="article-header">
+        <p class="eyebrow">Методология</p>
+        <h1>Как подготавливаются данные наблюдения</h1>
+        <p class="abstract">
+          Данные проходят путь от первоисточника до публичной карты: загрузка, извлечение,
+          нормализация в общие контракты, проверка обязательных полей и публикация GeoJSON/JSON
+          артефактов для API и индексируемых страниц.
+        </p>
+      </header>
+      <article class="article-body">
+        <h2>1. Источник и извлечение</h2>
+        <p>
+          Адаптеры читают только явно разрешенные публичные материалы: таблицы CDC, отчеты ECDC,
+          WHO Disease Outbreak News и ручные записи редактора. Для каждой записи сохраняются
+          исходная ссылка, источник, дата загрузки, дата публикации, confidence и тип данных.
+        </p>
+        <h2>2. Нормализация</h2>
+        <p>
+          Разные источники используют разные периоды, географические обозначения и форматы таблиц.
+          Поэтому данные приводятся к общим контрактам: case aggregate, outbreak event, news item
+          и region. Публичная карта использует только поля, которые прошли валидацию контрактов.
+        </p>
+        <h2>3. География и точность</h2>
+        <p>
+          Геокодирование не притворяется более точным, чем источник. Если запись опубликована на
+          уровне страны, она не отображается как точный населенный пункт. Поле precision показывает
+          уровень: country, admin1, admin2, event, point или unknown.
+        </p>
+        <h2>4. Свежесть</h2>
+        <p>
+          Публичный слой хранит generated_at и даты публикации отдельных записей. В интерфейсе эти
+          даты показываются рядом с метриками и региональными карточками, чтобы пользователь видел,
+          к какому периоду относится число.
+        </p>
+        <div class="faq">
+          <h2>FAQ</h2>
+          <h3>Это медицинская рекомендация?</h3>
+          <p>Нет. Проект показывает опубликованные данные наблюдения и ссылки на источники.</p>
+          <h3>Почему у региона может не быть точки на карте?</h3>
+          <p>Если источник не дает достаточной географии, запись остается в данных, но не рисуется как точка.</p>
+        </div>
+      </article>
+      <footer class="article-footer">
+        <div class="footer-grid">
+          <section>
+            <h2>Чейнджлог</h2>
+            <p>2026-05-13: добавлены локали, hreflang, метрики с источниками и article layout.</p>
+          </section>
+          <section>
+            <h2>Контакт</h2>
+            <p><a href="mailto:contact@orthohantavirus.example">contact@orthohantavirus.example</a></p>
+          </section>
+          <section>
+            <h2>Связанные разделы</h2>
+            <p><a href="/data-sources/">Источники данных</a> и <a href="/">интерактивная карта</a>.</p>
+          </section>
+        </div>
+      </footer>
     </main>
   </body>
 </html>

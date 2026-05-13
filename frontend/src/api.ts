@@ -95,12 +95,13 @@ export async function fetchJson<T>(url: string, init?: RequestInit): Promise<T> 
   return response.json() as Promise<T>;
 }
 
-export async function loadAppData(): Promise<AppData> {
+export async function loadAppData(locale = "ru"): Promise<AppData> {
+  const langQuery = `?lang=${encodeURIComponent(locale)}`;
   const [regions, outbreaks, summary, news] = await Promise.all([
-    fetchJson<FeatureCollection<RegionFeature>>(`${mapApiBaseUrl}/v1/map/regions`),
-    fetchJson<FeatureCollection<OutbreakFeature>>(`${mapApiBaseUrl}/v1/map/outbreaks`),
-    fetchJson<Summary>(`${mapApiBaseUrl}/v1/stats/summary`),
-    fetchJson<NewsItem[]>(`${newsApiBaseUrl}/v1/news`),
+    fetchJson<FeatureCollection<RegionFeature>>(`${mapApiBaseUrl}/v1/map/regions${langQuery}`),
+    fetchJson<FeatureCollection<OutbreakFeature>>(`${mapApiBaseUrl}/v1/map/outbreaks${langQuery}`),
+    fetchJson<Summary>(`${mapApiBaseUrl}/v1/stats/summary${langQuery}`),
+    fetchJson<NewsItem[]>(`${newsApiBaseUrl}/v1/news${langQuery}`),
   ]);
 
   return { regions, outbreaks, summary, news };

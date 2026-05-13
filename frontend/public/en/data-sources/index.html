@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Data sources | Orthohantavirus Monitor</title>
+    <meta
+      name="description"
+      content="Primary data sources and confidence model for Orthohantavirus Monitor surveillance pages."
+    />
+    <meta name="robots" content="index,follow,max-image-preview:large" />
+    <link rel="canonical" href="https://xn--80aagyweapgkddrtb.xn--p1ai/en/data-sources/" />
+    <link rel="alternate" hreflang="ru" href="https://xn--80aagyweapgkddrtb.xn--p1ai/data-sources/" />
+    <link rel="alternate" hreflang="en" href="https://xn--80aagyweapgkddrtb.xn--p1ai/en/data-sources/" />
+    <link rel="alternate" hreflang="x-default" href="https://xn--80aagyweapgkddrtb.xn--p1ai/data-sources/" />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="/static-page.css" />
+    <meta property="og:type" content="article" />
+    <meta property="og:locale" content="en_US" />
+    <meta property="og:locale:alternate" content="ru_RU" />
+    <meta property="og:title" content="Data sources | Orthohantavirus Monitor" />
+    <meta property="og:description" content="Primary data sources and confidence model for Orthohantavirus Monitor surveillance pages." />
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "Dataset",
+        "name": "Orthohantavirus surveillance dataset",
+        "inLanguage": ["ru", "en"],
+        "license": "https://creativecommons.org/licenses/by/4.0/",
+        "creator": {"@type": "Organization", "name": "Orthohantavirus Monitor"},
+        "temporalCoverage": "1993/..",
+        "spatialCoverage": "Global",
+        "distribution": {"@type": "DataDownload", "encodingFormat": "application/json"}
+      }
+    </script>
+  </head>
+  <body>
+    <main class="article-shell">
+      <nav class="top-nav" aria-label="Navigation">
+        <a class="brand" href="/en/">
+          <img src="/favicon.svg" width="28" height="28" alt="" />
+          <span>Orthohantavirus Monitor</span>
+        </a>
+        <div class="nav-links">
+          <a href="/en/about/">About</a>
+          <a href="/en/methodology/">Methodology</a>
+          <a class="lang-link" href="/data-sources/">RU</a>
+        </div>
+      </nav>
+      <header class="article-header">
+        <p class="eyebrow">Data sources</p>
+        <h1>Public sources and confidence levels</h1>
+        <p class="abstract">
+          The project uses a source-first model: every map point and news item keeps a source label,
+          URL, publication or fetch date, and confidence value.
+        </p>
+      </header>
+      <article class="article-body">
+        <h2>Current source families</h2>
+        <ul class="source-list">
+          <li><a href="https://www.cdc.gov/hantavirus/" rel="nofollow noopener">CDC</a>: public hantavirus materials and case data.</li>
+          <li><a href="https://www.ecdc.europa.eu/en/hantavirus-infection" rel="nofollow noopener">ECDC</a>: European epidemiological reports.</li>
+          <li><a href="https://www.who.int/emergencies/disease-outbreak-news" rel="nofollow noopener">WHO Disease Outbreak News</a>: outbreak reports.</li>
+          <li>Manual news: editor-reviewed local updates marked as manual.</li>
+        </ul>
+        <h2>Confidence</h2>
+        <p>
+          official is used for primary official publications. official_report_derived means a record
+          was extracted from an official report. secondary_verified is used for reviewed manual
+          updates. modelled and manual_review_required should not enter public headline metrics
+          without additional context.
+        </p>
+        <h2>License</h2>
+        <p>
+          Derived open datasets are published as CC BY 4.0 unless an original source sets stricter
+          terms. Citations should include the original source and access date.
+        </p>
+      </article>
+      <footer class="article-footer">
+        <div class="footer-grid">
+          <section>
+            <h2>Exports</h2>
+            <p>Public APIs return GeoJSON and JSON for map, statistics, outbreaks, and news.</p>
+          </section>
+          <section>
+            <h2>Validation</h2>
+            <p>Pydantic schemas and contract tests check required fields before publication.</p>
+          </section>
+          <section>
+            <h2>Updated</h2>
+            <p>Page last updated: 2026-05-13. Version: 0.1.0.</p>
+          </section>
+        </div>
+      </footer>
+    </main>
+  </body>
+</html>

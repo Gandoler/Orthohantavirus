@@ -1,0 +1,10 @@
+{
+  "home": {
+    "title": "Orthohantavirus Monitor | Cases, outbreaks, verified updates",
+    "description": "Verified hantavirus cases, outbreak reports, and public health updates from CDC, ECDC, and WHO on an interactive surveillance map."
+  },
+  "admin": {
+    "title": "Admin console | Orthohantavirus Monitor",
+    "description": "Private manual update publishing console."
+  }
+}

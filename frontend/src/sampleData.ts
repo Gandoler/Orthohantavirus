@@ -93,3 +93,39 @@ export const sampleData: AppData = {
     },
   ],
 };
+
+export function localizedSampleData(locale: string): AppData {
+  if (locale.toLowerCase().startsWith("en")) {
+    return sampleData;
+  }
+
+  return {
+    ...sampleData,
+    outbreaks: {
+      ...sampleData.outbreaks,
+      features: sampleData.outbreaks.features.map((feature) =>
+        feature.id === "who-2026-don600"
+          ? {
+              ...feature,
+              properties: {
+                ...feature.properties,
+                title: "Кластер хантавирусной инфекции, связанный с круизным путешествием",
+                location_label: "Несколько стран",
+              },
+            }
+          : feature,
+      ),
+    },
+    news: sampleData.news.map((item) =>
+      item.id === "who-2026-don600"
+        ? {
+            ...item,
+            title: "Кластер хантавирусной инфекции, связанный с круизным путешествием",
+            summary:
+              "ВОЗ сообщила о кластере хантавирусных инфекций, связанных с круизным путешествием; в подтвержденных случаях указан вирус Andes.",
+            language: "ru",
+          }
+        : item,
+    ),
+  };
+}

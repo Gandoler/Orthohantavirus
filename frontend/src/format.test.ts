@@ -1,16 +1,22 @@
 import { describe, expect, it } from "vitest";
 
-import { formatDate, formatNumber, sortedNews } from "./format";
+import { formatDate, formatNumber, formatPeriod, sortedNews } from "./format";
 
 describe("format helpers", () => {
   it("formats null-safe numbers", () => {
     expect(formatNumber(1234)).toBe("1,234");
+    expect(formatNumber(1234, "ru")).toBe("1 234");
     expect(formatNumber(null)).toBe("0");
   });
 
   it("formats dates", () => {
     expect(formatDate("2026-05-08T18:00:00Z")).toContain("2026");
     expect(formatDate(null)).toBe("Unknown");
+  });
+
+  it("formats periods with locale-specific dates", () => {
+    expect(formatPeriod("2026-05-01", "2026-05-08", "en")).toContain("2026");
+    expect(formatPeriod(null, null, "ru", "нет данных")).toBe("нет данных");
   });
 
   it("sorts news newest first", () => {

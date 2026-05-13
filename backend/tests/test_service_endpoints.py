@@ -162,8 +162,14 @@ def test_map_api_indexable_country_outbreak_and_sitemap_pages(monkeypatch) -> No
 
     country_response = client.get("/countries/US-AZ")
     assert country_response.status_code == 200
-    assert "Arizona hantavirus surveillance" in country_response.text
-    assert "<h1>Arizona hantavirus surveillance</h1>" in country_response.text
+    assert "Arizona: наблюдение по хантавирусу" in country_response.text
+    assert '<html lang="ru">' in country_response.text
+    assert 'hreflang="en"' in country_response.text
+
+    country_en_response = client.get("/en/countries/US-AZ")
+    assert country_en_response.status_code == 200
+    assert "Arizona hantavirus surveillance" in country_en_response.text
+    assert '<html lang="en">' in country_en_response.text
 
     outbreak_response = client.get("/outbreaks/who-test-outbreak")
     assert outbreak_response.status_code == 200
@@ -173,8 +179,10 @@ def test_map_api_indexable_country_outbreak_and_sitemap_pages(monkeypatch) -> No
     assert sitemap_response.status_code == 200
     assert sitemap_response.headers["content-type"].startswith("application/xml")
     assert "/countries/US-AZ" in sitemap_response.text
+    assert "/en/countries/US-AZ" in sitemap_response.text
     assert "/outbreaks/who-test-outbreak" in sitemap_response.text
     assert "/news/who-test" in sitemap_response.text
+    assert 'xhtml:link rel="alternate" hreflang="ru"' in sitemap_response.text
 
 
 def test_news_service_health(monkeypatch) -> None:
@@ -231,9 +239,14 @@ def test_news_service_indexable_news_page(monkeypatch) -> None:
     response = TestClient(news_app).get("/news/who-test")
 
     assert response.status_code == 200
+    assert '<html lang="ru">' in response.text
     assert "<h1>Test news</h1>" in response.text
     assert "application/ld+json" in response.text
     assert 'rel="canonical"' in response.text
+
+    en_response = TestClient(news_app).get("/en/news/who-test")
+    assert en_response.status_code == 200
+    assert '<html lang="en">' in en_response.text
 
 
 def test_admin_news_requires_token(monkeypatch) -> None:

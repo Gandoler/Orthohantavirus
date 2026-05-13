@@ -3,7 +3,6 @@ import {
   Activity,
   AlertCircle,
   AlertTriangle,
-  CheckCircle2,
   ChevronDown,
   ChevronUp,
   Compass,
@@ -35,12 +34,16 @@ import type {
 import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { Dispatch, SetStateAction } from "react";
 import type { ReactNode } from "react";
+import { useTranslation } from "react-i18next";
 
 import { installAnalytics, trackEvent } from "./analytics";
 import type { AppData, ManualNewsPayload, NewsItem, RegionFeature } from "./api";
 import { createManualNews, deleteManualNews, loadAppData, loadManualNews } from "./api";
-import { formatDate, formatNumber, sortedNews } from "./format";
-import { sampleData } from "./sampleData";
+import { formatDate, formatNumber, formatPeriod, sortedNews } from "./format";
+import { LanguageSwitcher } from "./LanguageSwitcher";
+import { type AppLocale, normalizeLocale, stripLocalePrefix } from "./i18n";
+import { updateDocumentHead } from "./head";
+import { localizedSampleData } from "./sampleData";
 import "./styles.css";
 
 const ADMIN_TOKEN_STORAGE_KEY = "orthohantavirus-admin-token";
@@ -58,7 +61,9 @@ type LayerState = {
 type MapLibreModule = typeof import("maplibre-gl");
 
 export function App() {
-  const isAdminRoute = window.location.pathname.startsWith("/admin");
+  const { t, i18n } = useTranslation(["common", "seo"]);
+  const locale = normalizeLocale(i18n.language);
+  const isAdminRoute = stripLocalePrefix(window.location.pathname).startsWith("/admin");
   const [theme, setTheme] = useState<Theme>(() => loadInitialTheme());
 
   useEffect(() => {
@@ -69,6 +74,15 @@ export function App() {
     document.documentElement.dataset.theme = theme;
     localStorage.setItem(THEME_STORAGE_KEY, theme);
   }, [theme]);
+
+  useEffect(() => {
+    updateDocumentHead({
+      locale,
+      title: isAdminRoute ? t("seo:admin.title") : t("seo:home.title"),
+      description: isAdminRoute ? t("seo:admin.description") : t("seo:home.description"),
+      robots: isAdminRoute ? "noindex,nofollow" : "index,follow,max-image-preview:large",
+    });
+  }, [isAdminRoute, locale, t]);
 
   const toggleTheme = useCallback(() => {
     setTheme((current) => (current === "light" ? "dark" : "light"));
@@ -82,9 +96,12 @@ export function App() {
 }
 
 function PublicMapApp({ theme, onToggleTheme }: { theme: Theme; onToggleTheme: () => void }) {
-  const [data, setData] = useState<AppData>(sampleData);
+  const { t, i18n } = useTranslation(["common", "map", "news"]);
+  const locale = normalizeLocale(i18n.language);
+  const localeRef = useRef<AppLocale>(locale);
+  const [data, setData] = useState<AppData>(() => localizedSampleData(locale));
   const [selectedRegion, setSelectedRegion] = useState<RegionFeature | null>(
-    sampleData.regions.features[0] ?? null,
+    localizedSampleData(locale).regions.features[0] ?? null,
   );
   const [dataState, setDataState] = useState<DataState>("loading");
   const [errorText, setErrorText] = useState("");
@@ -103,20 +120,32 @@ function PublicMapApp({ theme, onToggleTheme }: { theme: Theme; onToggleTheme: (
     return window.matchMedia?.("(min-width: 960px)").matches ?? true;
   });
 
+  useEffect(() => {
+    localeRef.current = locale;
+  }, [locale]);
+
+  useEffect(() => {
+    if (dataState === "live" || dataState === "loading") return;
+    const fallbackData = localizedSampleData(locale);
+    setData(fallbackData);
+    setSelectedRegion(fallbackData.regions.features[0] ?? null);
+  }, [dataState, locale]);
+
   const refreshData = useCallback(() => {
     setDataState("loading");
     setErrorText("");
-    loadAppData()
+    loadAppData(localeRef.current)
       .then((loaded) => {
         const hasData = loaded.regions.features.length > 0 || loaded.news.length > 0;
-        const nextData = hasData ? loaded : sampleData;
+        const nextData = hasData ? loaded : localizedSampleData(localeRef.current);
         setData(nextData);
         setSelectedRegion(nextData.regions.features[0] ?? null);
         setDataState(hasData ? "live" : "fallback");
       })
       .catch((error: Error) => {
-        setData(sampleData);
-        setSelectedRegion(sampleData.regions.features[0] ?? null);
+        const fallbackData = localizedSampleData(localeRef.current);
+        setData(fallbackData);
+        setSelectedRegion(fallbackData.regions.features[0] ?? null);
         setErrorText(error.message);
         setDataState("error");
       });
@@ -142,6 +171,9 @@ function PublicMapApp({ theme, onToggleTheme }: { theme: Theme; onToggleTheme: (
   const latestDate = data.summary.generated_at ?? data.regions.generated_at;
   const hasRenderableMapData = data.regions.features.some((item) => item.geometry) ||
     data.outbreaks.features.some((item) => item.geometry);
+  const sourceLine = formatSources(data.summary.sources);
+  const casePeriod = summarizeCasePeriod(data, locale, t("map:metrics.periodUnknown"));
+  const latestDateText = formatDate(latestDate, locale, t("status.unknown"));
 
   const handleSelectRegion = useCallback((region: RegionFeature) => {
     setSelectedRegion(region);
@@ -162,7 +194,7 @@ function PublicMapApp({ theme, onToggleTheme }: { theme: Theme; onToggleTheme: (
 
   return (
     <main className={shellClasses}>
-      <aside className="monitor-sidebar" aria-label="News feed">
+      <aside className="monitor-sidebar" aria-label={t("map:aria.newsFeed")}>
         <div className="sidebar-handle" aria-hidden="true" />
         <button
           className="sidebar-sheet-toggle"
@@ -172,41 +204,69 @@ function PublicMapApp({ theme, onToggleTheme }: { theme: Theme; onToggleTheme: (
         >
           <span className="sheet-toggle__inner">
             <Newspaper size={16} aria-hidden="true" />
-            <span>{feedSheetOpen ? "Hide feed" : "Show feed"}</span>
-            <span className="sheet-toggle__count">{formatNumber(filteredNews.length)}</span>
+            <span>{feedSheetOpen ? t("actions.hideFeed") : t("actions.showFeed")}</span>
+            <span className="sheet-toggle__count">{formatNumber(filteredNews.length, locale)}</span>
           </span>
           {feedSheetOpen ? <ChevronDown size={18} aria-hidden="true" /> : <ChevronUp size={18} aria-hidden="true" />}
         </button>
 
         <div className="sidebar-scroll">
-          <section className="trust-strip" aria-label="Data trust and freshness">
+          <section className="trust-strip" aria-label={t("map:aria.dataTrust")}>
             <span>
-              <CheckCircle2 size={14} aria-hidden="true" />
-              Official-source first
+              <OfficialSourceMark />
+              {t("status.officialSourceFirst")}
             </span>
             <span>
               <Database size={14} aria-hidden="true" />
-              Updated {formatDate(latestDate)}
+              {t("status.updated", { date: latestDateText })}
             </span>
           </section>
 
           {dataState === "loading" ? (
-            <MetricSkeleton />
+            <MetricSkeleton label={t("map:metrics.loadingPeriod")} />
           ) : (
-            <section className="summary-grid" aria-label="Summary">
-              <Metric label="Reported cases" value={formatNumber(data.summary.reported_cases_total)} tone="red" />
-              <Metric label="Deaths" value={formatNumber(data.summary.reported_deaths_total)} tone="ink" />
-              <Metric label="Outbreak reports" value={formatNumber(data.summary.outbreak_events)} tone="amber" />
-              <Metric label="Verified updates" value={formatNumber(data.summary.news_items)} tone="blue" />
+            <section className="summary-grid" aria-label={t("map:aria.summary")}>
+              <Metric
+                label={t("map:metrics.reportedCases")}
+                value={formatNumber(data.summary.reported_cases_total, locale)}
+                tone="red"
+                period={t("map:metrics.periodLine", { period: casePeriod })}
+                source={t("map:metrics.sourceLine", { sources: sourceLine })}
+                trendLabel={t("map:metrics.seriesSoon")}
+              />
+              <Metric
+                label={t("map:metrics.deaths")}
+                value={formatNumber(data.summary.reported_deaths_total, locale)}
+                tone="ink"
+                period={t("map:metrics.periodLine", { period: casePeriod })}
+                source={t("map:metrics.sourceLine", { sources: sourceLine })}
+                trendLabel={t("map:metrics.seriesSoon")}
+              />
+              <Metric
+                label={t("map:metrics.outbreakReports")}
+                value={formatNumber(data.summary.outbreak_events, locale)}
+                tone="amber"
+                period={t("map:metrics.periodLine", { period: formatDate(latestDate, locale, t("status.unknown")) })}
+                source={t("map:metrics.sourceLine", { sources: sourceLine })}
+                trendLabel={t("map:metrics.seriesSoon")}
+              />
+              <Metric
+                label={t("map:metrics.verifiedUpdates")}
+                value={formatNumber(data.summary.news_items, locale)}
+                tone="blue"
+                period={t("map:metrics.periodLine", { period: formatDate(latestDate, locale, t("status.unknown")) })}
+                source={t("map:metrics.sourceLine", { sources: sourceLine })}
+                trendLabel={t("map:metrics.seriesSoon")}
+              />
             </section>
           )}
 
-          <section className="feed-controls" aria-label="News filters">
+          <section className="feed-controls" aria-label={t("map:aria.feedFilters")}>
             <label className="search-control">
               <Search size={15} aria-hidden="true" />
               <input
-                aria-label="Search news"
-                placeholder="Search verified updates"
+                aria-label={t("map:search.aria")}
+                placeholder={t("map:search.placeholder")}
                 value={query}
                 onChange={(event) => setQuery(event.target.value)}
               />
@@ -214,11 +274,11 @@ function PublicMapApp({ theme, onToggleTheme }: { theme: Theme; onToggleTheme: (
             <label className="select-control">
               <ListFilter size={15} aria-hidden="true" />
               <select
-                aria-label="Filter news by source"
+                aria-label={t("map:search.filterAria")}
                 value={sourceFilter}
                 onChange={(event) => setSourceFilter(event.target.value)}
               >
-                <option value="all">All sources</option>
+                <option value="all">{t("map:search.allSources")}</option>
                 {sourceOptions.map((source) => (
                   <option key={source} value={source}>
                     {source.toUpperCase()}
@@ -228,21 +288,21 @@ function PublicMapApp({ theme, onToggleTheme }: { theme: Theme; onToggleTheme: (
             </label>
           </section>
 
-          <section className="news-list" aria-label="Official news">
+          <section className="news-list" aria-label={t("map:aria.officialNews")}>
             <div className="section-title">
-              <Newspaper size={16} aria-hidden="true" />
-              <h2>Verified updates</h2>
-              <span>{formatNumber(filteredNews.length)}</span>
+              <h2>{t("news:verifiedUpdates")}</h2>
+              <span>{formatNumber(filteredNews.length, locale)}</span>
             </div>
             {dataState === "loading" ? (
               <NewsSkeleton />
             ) : (
-              filteredNews.map((item) => <NewsCard item={item} key={item.id} />)
+              filteredNews.map((item, index) => <NewsCard item={item} key={item.id} locale={locale} ordinal={index + 1} />)
             )}
             {dataState !== "loading" && filteredNews.length === 0 ? (
-              <p className="empty-state">No updates matched the current filters.</p>
+              <p className="empty-state">{t("news:empty")}</p>
             ) : null}
           </section>
+          <SiteFooter locale={locale} generatedAt={latestDate} />
         </div>
       </aside>
 
@@ -253,66 +313,68 @@ function PublicMapApp({ theme, onToggleTheme }: { theme: Theme; onToggleTheme: (
           visibleLayers={visibleLayers}
           onSelectRegion={handleSelectRegion}
           theme={theme}
+          locale={locale}
         />
 
-        <header className="map-topbar" aria-label="Application header">
+        <header className="map-topbar" aria-label={t("map:aria.appHeader")}>
           <div className="map-topbar__brand">
-            <span className="brand-mark" aria-hidden="true" />
+            <BrandMark />
             <div>
-              <p className="eyebrow">Orthohantavirus monitor</p>
+              <p className="eyebrow">{t("brand.eyebrow")}</p>
               <strong>
-                <span className="desktop-only">Cases, outbreaks &amp; verified updates</span>
-                <span className="mobile-only">Surveillance map</span>
+                <span className="desktop-only">{t("brand.tagline")}</span>
+                <span className="mobile-only">{t("brand.mobileTitle")}</span>
               </strong>
             </div>
           </div>
           <div className="map-topbar__actions">
             <DataStatus state={dataState} />
+            <LanguageSwitcher />
             <button
               className="icon-button icon-button--ghost desktop-only"
               type="button"
               onClick={() => setSidebarOpen((current) => !current)}
-              title={sidebarOpen ? "Hide feed" : "Show feed"}
+              title={sidebarOpen ? t("actions.hideFeed") : t("actions.showFeed")}
             >
               <Layers size={16} aria-hidden="true" />
-              <span>{sidebarOpen ? "Hide feed" : "Show feed"}</span>
+              <span>{sidebarOpen ? t("actions.hideFeed") : t("actions.showFeed")}</span>
             </button>
             <button
               className="icon-button icon-button--ghost"
               type="button"
               onClick={refreshData}
-              title="Refresh data"
+              title={t("actions.refreshData")}
             >
               <RefreshCw size={16} aria-hidden="true" />
-              <span className="desktop-only">Refresh</span>
+              <span className="desktop-only">{t("actions.refresh")}</span>
             </button>
             <ThemeButton theme={theme} onToggleTheme={onToggleTheme} />
           </div>
         </header>
 
-        <div className="map-controls" aria-label="Map layers">
+        <div className="map-controls" aria-label={t("map:aria.mapLayers")}>
           <LayerButton
             active={visibleLayers.cases}
-            icon={<ThermometerSun size={15} aria-hidden="true" />}
-            label="Cases"
+            icon={<ThermometerSun size={14} strokeWidth={1.5} aria-hidden="true" />}
+            label={t("map:layers.cases")}
             onClick={() => toggleLayer("cases", setVisibleLayers)}
           />
           <LayerButton
             active={visibleLayers.outbreaks}
-            icon={<Flame size={15} aria-hidden="true" />}
-            label="Outbreaks"
+            icon={<Flame size={14} strokeWidth={1.5} aria-hidden="true" />}
+            label={t("map:layers.outbreaks")}
             onClick={() => toggleLayer("outbreaks", setVisibleLayers)}
           />
           <LayerButton
             active={visibleLayers.heatmap}
-            icon={<Activity size={15} aria-hidden="true" />}
-            label="Heatmap"
+            icon={<Activity size={14} strokeWidth={1.5} aria-hidden="true" />}
+            label={t("map:layers.heatmap")}
             onClick={() => toggleLayer("heatmap", setVisibleLayers)}
           />
           <LayerButton
             active={visibleLayers.news}
-            icon={<Newspaper size={15} aria-hidden="true" />}
-            label="News"
+            icon={<Newspaper size={14} strokeWidth={1.5} aria-hidden="true" />}
+            label={t("map:layers.news")}
             onClick={() => toggleLayer("news", setVisibleLayers)}
           />
         </div>
@@ -322,6 +384,7 @@ function PublicMapApp({ theme, onToggleTheme }: { theme: Theme; onToggleTheme: (
         <RegionPanel
           region={selectedRegion}
           generatedAt={latestDate}
+          locale={locale}
           open={regionPanelOpen}
           onClose={() => setRegionPanelOpen(false)}
           onOpen={() => setRegionPanelOpen(true)}
@@ -338,9 +401,11 @@ function AdminApp({
   theme: Theme;
   onToggleTheme: () => void;
 }) {
+  const { t, i18n } = useTranslation(["admin", "common"]);
+  const locale = normalizeLocale(i18n.language);
   const [token, setToken] = useState(() => sessionStorage.getItem(ADMIN_TOKEN_STORAGE_KEY) ?? "");
   const [items, setItems] = useState<NewsItem[]>([]);
-  const [statusText, setStatusText] = useState("Admin feed not loaded yet.");
+  const [statusText, setStatusText] = useState(t("admin:notLoaded"));
   const [isSaving, setIsSaving] = useState(false);
   const [form, setForm] = useState({
     title: "",
@@ -353,16 +418,16 @@ function AdminApp({
   });
 
   const loadItems = useCallback(() => {
-    setStatusText("Loading manual news...");
+    setStatusText(t("admin:loading"));
     loadManualNews(token)
       .then((loaded) => {
         setItems(sortedNews(loaded));
-        setStatusText(`Loaded ${loaded.length} manual news items.`);
+        setStatusText(t("admin:loaded", { count: loaded.length }));
       })
       .catch((error: Error) => {
-        setStatusText(`Cannot load manual news: ${error.message}. On local dev, enter NEWS_ADMIN_API_TOKEN.`);
+        setStatusText(t("admin:cannotLoad", { message: error.message }));
       });
-  }, [token]);
+  }, [t, token]);
 
   useEffect(() => {
     loadItems();
@@ -370,7 +435,7 @@ function AdminApp({
 
   function saveToken() {
     sessionStorage.setItem(ADMIN_TOKEN_STORAGE_KEY, token.trim());
-    setStatusText("Admin token saved in this browser session.");
+    setStatusText(t("admin:tokenSaved"));
   }
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
@@ -389,10 +454,10 @@ function AdminApp({
     createManualNews(payload, token)
       .then((created) => {
         setItems((current) => sortedNews([created, ...current]));
-        setStatusText(`Published: ${created.title}`);
+        setStatusText(t("admin:published", { title: created.title }));
         setForm((current) => ({ ...current, title: "", summary: "", sourceUrl: "", publishedAt: "" }));
       })
-      .catch((error: Error) => setStatusText(`Cannot publish news: ${error.message}`))
+      .catch((error: Error) => setStatusText(t("admin:cannotPublish", { message: error.message })))
       .finally(() => setIsSaving(false));
   }
 
@@ -400,36 +465,37 @@ function AdminApp({
     deleteManualNews(newsId, token)
       .then(() => {
         setItems((current) => current.filter((item) => item.id !== newsId));
-        setStatusText("Manual news item deleted.");
+        setStatusText(t("admin:deleted"));
       })
-      .catch((error: Error) => setStatusText(`Cannot delete news: ${error.message}`));
+      .catch((error: Error) => setStatusText(t("admin:cannotDelete", { message: error.message })));
   }
 
   return (
     <main className="admin-shell">
       <header className="admin-header">
         <div>
-          <p className="eyebrow">Admin console</p>
-          <h1>Manual news publishing</h1>
+          <p className="eyebrow">{t("admin:eyebrow")}</p>
+          <h1>{t("admin:title")}</h1>
         </div>
         <div className="admin-actions">
+          <LanguageSwitcher />
           <ThemeButton theme={theme} onToggleTheme={onToggleTheme} />
           <div className="admin-auth">
             <Lock size={16} aria-hidden="true" />
             <input
-              aria-label="Admin API token"
-              placeholder="NEWS_ADMIN_API_TOKEN for local dev"
+              aria-label={t("admin:token")}
+              placeholder={t("admin:tokenPlaceholder")}
               type="password"
               value={token}
               onChange={(event) => setToken(event.target.value)}
             />
             <button className="icon-button" type="button" onClick={saveToken}>
               <Save size={16} aria-hidden="true" />
-              <span>Save</span>
+              <span>{t("common:actions.save")}</span>
             </button>
             <button className="icon-button" type="button" onClick={loadItems}>
               <RefreshCw size={16} aria-hidden="true" />
-              <span>Reload</span>
+              <span>{t("common:actions.reload")}</span>
             </button>
           </div>
         </div>
@@ -439,10 +505,10 @@ function AdminApp({
         <form className="editor-panel" onSubmit={handleSubmit}>
           <div className="section-title">
             <Plus size={17} aria-hidden="true" />
-            <h2>Create news item</h2>
+            <h2>{t("admin:create")}</h2>
           </div>
           <label>
-            Title
+            {t("admin:titleLabel")}
             <input
               required
               minLength={3}
@@ -452,7 +518,7 @@ function AdminApp({
             />
           </label>
           <label>
-            Summary
+            {t("admin:summaryLabel")}
             <textarea
               rows={8}
               value={form.summary}
@@ -461,7 +527,7 @@ function AdminApp({
           </label>
           <div className="form-row">
             <label>
-              Source URL
+              {t("admin:sourceUrl")}
               <input
                 required
                 type="url"
@@ -470,7 +536,7 @@ function AdminApp({
               />
             </label>
             <label>
-              Published at
+              {t("admin:publishedAt")}
               <input
                 type="datetime-local"
                 value={form.publishedAt}
@@ -480,14 +546,14 @@ function AdminApp({
           </div>
           <div className="form-row">
             <label>
-              Tags
+              {t("admin:tags")}
               <input
                 value={form.tags}
                 onChange={(event) => setForm((current) => ({ ...current, tags: event.target.value }))}
               />
             </label>
             <label>
-              Region codes
+              {t("admin:regionCodes")}
               <input
                 placeholder="RU-MOW, US-AZ"
                 value={form.regions}
@@ -495,37 +561,47 @@ function AdminApp({
               />
             </label>
           </div>
+          <label>
+            {t("admin:language")}
+            <select
+              value={form.language}
+              onChange={(event) => setForm((current) => ({ ...current, language: event.target.value }))}
+            >
+              <option value="ru">{t("common:language.ru")}</option>
+              <option value="en">{t("common:language.en")}</option>
+            </select>
+          </label>
           <button className="primary-action" type="submit" disabled={isSaving}>
             <Save size={17} aria-hidden="true" />
-            {isSaving ? "Publishing..." : "Publish news"}
+            {isSaving ? t("admin:publishing") : t("admin:publishNews")}
           </button>
           <p className="status-line" role="status">
             {statusText}
           </p>
         </form>
 
-        <section className="manual-feed" aria-label="Manual news items">
+        <section className="manual-feed" aria-label={t("admin:manualFeed")}>
           <div className="section-title">
             <Newspaper size={17} aria-hidden="true" />
-            <h2>Manual feed</h2>
-            <span>{formatNumber(items.length)}</span>
+            <h2>{t("admin:manualFeed")}</h2>
+            <span>{formatNumber(items.length, locale)}</span>
           </div>
           {items.map((item) => (
             <article className="manual-news-row" key={item.id}>
               <div>
                 <p className="news-meta-line">
-                  {item.source.toUpperCase()} · {formatDate(item.published_at ?? item.fetched_at)}
+                  {item.source.toUpperCase()} · {formatDate(item.published_at ?? item.fetched_at, locale)}
                 </p>
                 <h3>{item.title}</h3>
                 {item.summary ? <p>{item.summary}</p> : null}
               </div>
               <button className="danger-button" type="button" onClick={() => handleDelete(item.id)}>
                 <Trash2 size={16} aria-hidden="true" />
-                <span>Delete</span>
+                <span>{t("common:actions.delete")}</span>
               </button>
             </article>
           ))}
-          {items.length === 0 ? <p className="empty-state">No manual news yet.</p> : null}
+          {items.length === 0 ? <p className="empty-state">{t("admin:noManualNews")}</p> : null}
         </section>
       </div>
     </main>
@@ -533,9 +609,10 @@ function AdminApp({
 }
 
 function DataStatus({ state }: { state: DataState }) {
+  const { t } = useTranslation("common");
   const icon =
     state === "live" ? (
-      <CheckCircle2 size={16} aria-hidden="true" />
+      <LiveApiMark />
     ) : state === "error" ? (
       <AlertCircle size={16} aria-hidden="true" />
     ) : (
@@ -544,36 +621,100 @@ function DataStatus({ state }: { state: DataState }) {
   return (
     <div className={`data-pill data-pill--${state}`}>
       {icon}
-      <span>{state === "live" ? "Live API" : state === "loading" ? "Loading" : state === "error" ? "API fallback" : "Sample data"}</span>
+      <span>
+        {state === "live"
+          ? t("status.liveApi")
+          : state === "loading"
+            ? t("status.loading")
+            : state === "error"
+              ? t("status.apiFallback")
+              : t("status.sampleData")}
+      </span>
     </div>
+  );
+}
+
+function BrandMark() {
+  return (
+    <svg className="brand-mark" viewBox="0 0 36 36" role="img" aria-label="Hanta Monitor">
+      <rect x="1.5" y="1.5" width="33" height="33" rx="6" />
+      <circle cx="18" cy="18" r="11.5" />
+      <path d="M7.5 18h21M18 6.5v23M10.5 11.2c4.8 2.1 10.2 2.1 15 0M10.5 24.8c4.8-2.1 10.2-2.1 15 0" />
+      <circle className="brand-mark__marker" cx="23.6" cy="13.4" r="2.8" />
+    </svg>
+  );
+}
+
+function LiveApiMark() {
+  return (
+    <svg className="live-api-mark" viewBox="0 0 18 18" aria-hidden="true" focusable="false">
+      <circle className="live-api-mark__ring live-api-mark__ring--outer" cx="9" cy="9" r="7" />
+      <circle className="live-api-mark__ring live-api-mark__ring--inner" cx="9" cy="9" r="4.4" />
+      <circle cx="9" cy="9" r="2.2" />
+    </svg>
+  );
+}
+
+function OfficialSourceMark() {
+  return (
+    <svg className="official-source-mark" viewBox="0 0 18 18" aria-hidden="true" focusable="false">
+      <path d="M9 2.2 14 4v4.2c0 3.2-1.8 5.7-5 7.6-3.2-1.9-5-4.4-5-7.6V4l5-1.8Z" />
+      <path d="m6.5 8.8 1.6 1.6 3.6-3.8" />
+    </svg>
   );
 }
 
 function ThemeButton({ theme, onToggleTheme }: { theme: Theme; onToggleTheme: () => void }) {
+  const { t } = useTranslation("common");
+  const label = theme === "dark" ? t("actions.light") : t("actions.dark");
   return (
-    <button className="icon-button theme-button" type="button" onClick={onToggleTheme}>
+    <button className="icon-button theme-button" type="button" onClick={onToggleTheme} aria-label={label}>
       {theme === "dark" ? <Sun size={16} aria-hidden="true" /> : <Moon size={16} aria-hidden="true" />}
-      <span>{theme === "dark" ? "Light" : "Dark"}</span>
+      <span>{label}</span>
     </button>
   );
 }
 
-function Metric({ label, value, tone }: { label: string; value: string; tone: "red" | "amber" | "blue" | "ink" }) {
+function Metric({
+  label,
+  value,
+  tone,
+  period,
+  source,
+  trendLabel,
+}: {
+  label: string;
+  value: string;
+  tone: "red" | "amber" | "blue" | "ink";
+  period: string;
+  source: string;
+  trendLabel: string;
+}) {
   return (
     <div className={`metric metric--${tone}`}>
-      <span>{label}</span>
+      <span className="metric__label">{label}</span>
       <strong>{value}</strong>
+      <div className="metric__spark" aria-hidden="true">
+        <svg viewBox="0 0 80 20" focusable="false">
+          <path d="M2 14 L14 12 L26 13 L38 8 L50 10 L62 5 L78 7" />
+        </svg>
+        <small>{trendLabel}</small>
+      </div>
+      <span className="metric__period">{period}</span>
+      <span className="metric__source">{source}</span>
     </div>
   );
 }
 
-function MetricSkeleton() {
+function MetricSkeleton({ label }: { label: string }) {
+  const { t } = useTranslation("map");
   return (
-    <section className="summary-grid" aria-label="Summary loading">
+    <section className="summary-grid" aria-label={t("aria.summaryLoading")}>
       {[0, 1, 2, 3].map((item) => (
         <div className="metric metric--skeleton" key={item}>
           <span className="skeleton-line skeleton-line--short" />
           <strong className="skeleton-line skeleton-line--value" />
+          <span className="metric__period">{label}</span>
         </div>
       ))}
     </section>
@@ -595,12 +736,16 @@ function NewsSkeleton() {
   );
 }
 
-function NewsCard({ item }: { item: NewsItem }) {
+function NewsCard({ item, locale, ordinal }: { item: NewsItem; locale: AppLocale; ordinal: number }) {
+  const { t } = useTranslation("news");
   return (
     <article className={item.source === "manual" ? "news-card news-card--manual" : "news-card"}>
+      <span className="news-card__ordinal">{String(ordinal).padStart(2, "0")}</span>
       <div className="news-meta">
         <span>{item.source.toUpperCase()}</span>
-        <time dateTime={item.published_at ?? item.fetched_at}>{formatDate(item.published_at ?? item.fetched_at)}</time>
+        <time dateTime={item.published_at ?? item.fetched_at}>
+          {formatDate(item.published_at ?? item.fetched_at, locale)}
+        </time>
       </div>
       <h3>{item.title}</h3>
       {item.summary ? <p>{item.summary}</p> : null}
@@ -613,7 +758,7 @@ function NewsCard({ item }: { item: NewsItem }) {
         href={`/news/${encodeURIComponent(item.id)}`}
         onClick={() => trackEvent("source_link_open", { source: item.source, news_id: item.id })}
       >
-        Read update <ExternalLink size={14} aria-hidden="true" />
+        {t("readUpdate")} <ExternalLink size={14} aria-hidden="true" />
       </a>
     </article>
   );
@@ -644,13 +789,16 @@ function HantaMap({
   visibleLayers,
   onSelectRegion,
   theme,
+  locale,
 }: {
   data: AppData;
   dataState: DataState;
   visibleLayers: LayerState;
   onSelectRegion: (region: RegionFeature) => void;
   theme: Theme;
+  locale: AppLocale;
 }) {
+  const { t } = useTranslation("map");
   const containerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<MapLibreMap | null>(null);
   const mapModuleRef = useRef<MapLibreModule | null>(null);
@@ -658,9 +806,25 @@ function HantaMap({
   const onSelectRegionRef = useRef(onSelectRegion);
   const visibleLayersRef = useRef(visibleLayers);
   const themeRef = useRef(theme);
+  const mapTextRef = useRef({
+    webglUnavailable: t("status.webglUnavailable"),
+    mapCouldNotStart: t("status.mapCouldNotStart"),
+    mapLibraryCouldNotLoad: t("status.mapLibraryCouldNotLoad"),
+    zoomIn: t("controls.zoomIn"),
+    zoomOut: t("controls.zoomOut"),
+    resetNorth: t("controls.resetNorth"),
+  });
   const [fallbackReason, setFallbackReason] = useState<string | null>(null);
   dataRef.current = data;
   visibleLayersRef.current = visibleLayers;
+  mapTextRef.current = {
+    webglUnavailable: t("status.webglUnavailable"),
+    mapCouldNotStart: t("status.mapCouldNotStart"),
+    mapLibraryCouldNotLoad: t("status.mapLibraryCouldNotLoad"),
+    zoomIn: t("controls.zoomIn"),
+    zoomOut: t("controls.zoomOut"),
+    resetNorth: t("controls.resetNorth"),
+  };
 
   useEffect(() => {
     onSelectRegionRef.current = onSelectRegion;
@@ -677,7 +841,7 @@ function HantaMap({
         const maplibregl = module;
 
         if (!webGlAvailable()) {
-          setFallbackReason("WebGL is unavailable in this browser. Showing the compatibility map.");
+          setFallbackReason(mapTextRef.current.webglUnavailable);
           return;
         }
 
@@ -692,11 +856,16 @@ function HantaMap({
             attributionControl: { compact: true },
           });
         } catch {
-          setFallbackReason("The interactive map could not start. Showing the compatibility map.");
+          setFallbackReason(mapTextRef.current.mapCouldNotStart);
           return;
         }
 
         map.addControl(new maplibregl.NavigationControl({ visualizePitch: false, showCompass: false }), "bottom-right");
+        labelMapControls(map.getContainer(), {
+          zoomIn: mapTextRef.current.zoomIn,
+          zoomOut: mapTextRef.current.zoomOut,
+          resetNorth: mapTextRef.current.resetNorth,
+        });
         map.on("load", () => {
           installMapLayers(
             map,
@@ -709,7 +878,7 @@ function HantaMap({
         });
         mapRef.current = map;
       })
-        .catch(() => setFallbackReason("The map library could not load. Showing the compatibility map."));
+        .catch(() => setFallbackReason(mapTextRef.current.mapLibraryCouldNotLoad));
     });
 
     return () => {
@@ -719,6 +888,16 @@ function HantaMap({
       mapRef.current = null;
     };
   }, [fallbackReason]);
+
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map) return;
+    labelMapControls(map.getContainer(), {
+      zoomIn: t("controls.zoomIn"),
+      zoomOut: t("controls.zoomOut"),
+      resetNorth: t("controls.resetNorth"),
+    });
+  }, [locale, t]);
 
   useEffect(() => {
     themeRef.current = theme;
@@ -765,6 +944,7 @@ function HantaMap({
         reason={fallbackReason}
         visibleLayers={visibleLayers}
         onSelectRegion={onSelectRegion}
+        locale={locale}
       />
     );
   }
@@ -772,7 +952,7 @@ function HantaMap({
   return (
     <div className="map-container-shell">
       {dataState === "loading" ? (
-        <div className="map-loading" aria-label="Map loading">
+        <div className="map-loading" aria-label={t("aria.mapLoading")}>
           <Loader2 size={24} aria-hidden="true" />
         </div>
       ) : null}
@@ -840,13 +1020,13 @@ function installMapLayers(
         ["linear"],
         ["heatmap-density"],
         0,
-        "rgba(47, 95, 152, 0)",
+        "rgba(39, 74, 110, 0)",
         0.35,
-        "rgba(66, 153, 225, 0.36)",
+        "rgba(39, 74, 110, 0.34)",
         0.7,
-        "rgba(245, 158, 11, 0.46)",
+        "rgba(179, 106, 26, 0.46)",
         1,
-        "rgba(189, 61, 55, 0.62)",
+        "rgba(158, 45, 39, 0.62)",
       ],
       "heatmap-radius": ["interpolate", ["linear"], ["zoom"], 0, 18, 5, 38],
       "heatmap-opacity": 0.78,
@@ -860,7 +1040,7 @@ function installMapLayers(
     filter: ["has", "point_count"],
     layout: { visibility: visibleLayers.cases ? "visible" : "none" },
     paint: {
-      "circle-color": ["step", ["get", "point_count"], "#2f5f98", 6, "#b66a1c", 18, "#bd3d37"],
+      "circle-color": ["step", ["get", "point_count"], "#274A6E", 6, "#B36A1A", 18, "#9E2D27"],
       "circle-radius": ["step", ["get", "point_count"], 16, 6, 22, 18, 30],
       "circle-opacity": 0.86,
       "circle-stroke-color": "#ffffff",
@@ -894,11 +1074,11 @@ function installMapLayers(
         ["linear"],
         ["coalesce", ["get", "confirmed_cases"], 0],
         0,
-        "#2f5f98",
+        "#274A6E",
         100,
-        "#b66a1c",
+        "#B36A1A",
         800,
-        "#bd3d37",
+        "#9E2D27",
       ],
       "circle-radius": [
         "interpolate",
@@ -922,10 +1102,10 @@ function installMapLayers(
     source: "outbreaks",
     layout: { visibility: visibleLayers.outbreaks ? "visible" : "none" },
     paint: {
-      "circle-color": "#111827",
+      "circle-color": "#0F1411",
       "circle-radius": 8,
       "circle-opacity": 0.9,
-      "circle-stroke-color": "#f59e0b",
+      "circle-stroke-color": "#9C5311",
       "circle-stroke-width": 2.4,
     },
   });
@@ -935,7 +1115,7 @@ function installMapLayers(
     source: "news-events",
     layout: { visibility: visibleLayers.news ? "visible" : "none" },
     paint: {
-      "circle-color": "#0891b2",
+      "circle-color": "#1B638F",
       "circle-radius": 7,
       "circle-opacity": 0.82,
       "circle-stroke-color": "#ffffff",
@@ -1066,19 +1246,22 @@ function FallbackMap({
   reason,
   visibleLayers,
   onSelectRegion,
+  locale,
 }: {
   data: AppData;
   reason: string;
   visibleLayers: LayerState;
   onSelectRegion: (region: RegionFeature) => void;
+  locale: AppLocale;
 }) {
+  const { t } = useTranslation("map");
   return (
-    <div className="fallback-map" aria-label="Compatibility map">
+    <div className="fallback-map" aria-label={t("aria.compatibilityMap")}>
       <div className="fallback-notice">
         <AlertTriangle size={16} aria-hidden="true" />
         <span>{reason}</span>
       </div>
-      <svg className="fallback-grid" viewBox="0 0 100 100" role="img" aria-label="World grid">
+      <svg className="fallback-grid" viewBox="0 0 100 100" role="img" aria-label={t("aria.worldGrid")}>
         {[20, 40, 60, 80].map((value) => (
           <line key={`x-${value}`} x1={value} y1="0" x2={value} y2="100" />
         ))}
@@ -1099,7 +1282,10 @@ function FallbackMap({
                   style={{ left: `${point.x}%`, top: `${point.y}%`, width: size, height: size }}
                   type="button"
                   onClick={() => onSelectRegion(feature)}
-                  title={`${feature.properties.label}: ${formatNumber(feature.properties.confirmed_cases)} cases`}
+                  title={t("region.caseTitle", {
+                    region: feature.properties.label,
+                    count: formatNumber(feature.properties.confirmed_cases, locale),
+                  })}
                 />
               );
             })
@@ -1132,19 +1318,20 @@ function MapStatusOverlay({
   errorText: string;
   hasRenderableData: boolean;
 }) {
+  const { t } = useTranslation("map");
   if (state === "loading") {
     return (
       <div className="map-status map-status--loading">
         <Loader2 size={18} aria-hidden="true" />
-        Loading surveillance layers
+        {t("status.loadingLayers")}
       </div>
     );
   }
   if (state === "error") {
     return (
-      <div className="map-status map-status--error">
+      <div className="map-status map-status--error" title={errorText || undefined}>
         <AlertCircle size={18} aria-hidden="true" />
-        API unavailable. Showing sample data. {errorText ? `(${errorText})` : ""}
+        {t("status.apiUnavailable")}
       </div>
     );
   }
@@ -1152,7 +1339,7 @@ function MapStatusOverlay({
     return (
       <div className="map-status">
         <AlertTriangle size={18} aria-hidden="true" />
-        No geocoded points are available for the current dataset.
+        {t("status.noGeocodedPoints")}
       </div>
     );
   }
@@ -1160,30 +1347,31 @@ function MapStatusOverlay({
 }
 
 function MapLegend({ visibleLayers }: { visibleLayers: LayerState }) {
+  const { t } = useTranslation("map");
   return (
-    <div className="map-legend" aria-label="Map legend">
+    <div className="map-legend" aria-label={t("aria.mapLegend")}>
       {visibleLayers.cases ? (
         <span>
           <i className="legend-dot legend-dot--case" />
-          Reported cases
+          {t("legend.cases")}
         </span>
       ) : null}
       {visibleLayers.heatmap ? (
         <span>
           <i className="legend-dot legend-dot--heatmap" />
-          Case heatmap
+          {t("legend.heatmap")}
         </span>
       ) : null}
       {visibleLayers.outbreaks ? (
         <span>
           <i className="legend-dot legend-dot--outbreak" />
-          Outbreak report
+          {t("legend.outbreaks")}
         </span>
       ) : null}
       {visibleLayers.news ? (
         <span>
           <i className="legend-dot legend-dot--news" />
-          News-linked region
+          {t("legend.news")}
         </span>
       ) : null}
     </div>
@@ -1193,16 +1381,19 @@ function MapLegend({ visibleLayers }: { visibleLayers: LayerState }) {
 function RegionPanel({
   region,
   generatedAt,
+  locale,
   open,
   onClose,
   onOpen,
 }: {
   region: RegionFeature | null;
   generatedAt: string | undefined;
+  locale: AppLocale;
   open: boolean;
   onClose: () => void;
   onOpen: () => void;
 }) {
+  const { t } = useTranslation("map");
   if (!region) {
     return null;
   }
@@ -1213,55 +1404,133 @@ function RegionPanel({
         type="button"
         className="region-pill"
         onClick={onOpen}
-        aria-label={`Show details for ${region.properties.label}`}
+        aria-label={t("region.showDetails", { region: region.properties.label })}
       >
         <span className="region-pill__dot" aria-hidden="true" />
         <span className="region-pill__label">{region.properties.label}</span>
-        <span className="region-pill__value">{formatNumber(region.properties.confirmed_cases)}</span>
+        <span className="region-pill__value">{formatNumber(region.properties.confirmed_cases, locale)}</span>
       </button>
     );
   }
 
   return (
-    <aside className="region-panel" aria-label="Selected region">
+    <aside className="region-panel" aria-label={t("aria.selectedRegion")}>
       <header className="region-panel__head">
         <div>
-          <p className="eyebrow">Selected region</p>
+          <p className="eyebrow">{t("region.selected")}</p>
           <h2>{region.properties.label}</h2>
         </div>
         <button
           type="button"
           className="icon-button icon-button--mini"
           onClick={onClose}
-          aria-label="Hide region details"
+          aria-label={t("region.hideDetails")}
         >
           <X size={15} aria-hidden="true" />
         </button>
       </header>
       <dl>
         <div>
-          <dt>Cases</dt>
-          <dd>{formatNumber(region.properties.confirmed_cases)}</dd>
+          <dt>{t("region.cases")}</dt>
+          <dd>{formatNumber(region.properties.confirmed_cases, locale)}</dd>
         </div>
         <div>
-          <dt>Deaths</dt>
-          <dd>{formatNumber(region.properties.deaths)}</dd>
+          <dt>{t("region.deaths")}</dt>
+          <dd>{formatNumber(region.properties.deaths, locale)}</dd>
         </div>
         <div>
-          <dt>Precision</dt>
+          <dt>{t("region.precision")}</dt>
           <dd>{region.properties.geo_precision}</dd>
         </div>
         <div>
-          <dt>Source</dt>
+          <dt>{t("region.source")}</dt>
           <dd>{region.properties.sources.join(", ").toUpperCase()}</dd>
         </div>
       </dl>
       <p className="freshness">
         <Compass size={13} aria-hidden="true" />
-        Updated {formatDate(generatedAt)}
+        {t("region.updated", { date: formatDate(generatedAt, locale) })}
       </p>
     </aside>
   );
+}
+
+function SiteFooter({ locale, generatedAt }: { locale: AppLocale; generatedAt: string | undefined }) {
+  const { t } = useTranslation("common");
+  const version = import.meta.env.VITE_APP_VERSION ?? "0.1.0";
+  const deployedAt = import.meta.env.VITE_BUILD_DATE ?? formatDate(generatedAt, locale, t("status.unknown"));
+
+  return (
+    <footer className="site-footer" data-print-url={window.location.href}>
+      <div className="site-footer__grid">
+        <section>
+          <h2>{t("footer.project")}</h2>
+          <p>{t("footer.aboutText")}</p>
+          <a href={locale === "en" ? "/en/about/" : "/about/"}>{t("routes.about")}</a>
+        </section>
+        <section>
+          <h2>{t("footer.sources")}</h2>
+          <p>{t("footer.sourcesText")}</p>
+          <a href={locale === "en" ? "/en/data-sources/" : "/data-sources/"}>{t("routes.dataSources")}</a>
+        </section>
+        <section>
+          <h2>{t("footer.methodology")}</h2>
+          <p>{t("footer.methodologyText")}</p>
+          <a href={locale === "en" ? "/en/methodology/" : "/methodology/"}>{t("routes.methodology")}</a>
+        </section>
+      </div>
+      <div className="site-footer__license">
+        <span className="cc-mark" aria-hidden="true">CC</span>
+        <p>{t("footer.licenseText")}</p>
+      </div>
+      <div className="site-footer__links" aria-label={t("footer.contact")}>
+        <a href="mailto:contact@orthohantavirus.example">{t("footer.email")}</a>
+        <a href="https://github.com/" rel="noreferrer">{t("footer.github")}</a>
+        <a href="/rss.xml">{t("footer.rss")}</a>
+      </div>
+      <p className="site-footer__meta">
+        {t("footer.build", { version })} · {t("footer.deployed", { date: deployedAt })} ·{" "}
+        <a href="/status">{t("footer.status")}</a>
+      </p>
+    </footer>
+  );
+}
+
+function formatSources(sources: string[]): string {
+  return sources.length ? sources.map((source) => source.toUpperCase()).join(" + ") : "CDC + ECDC + WHO";
+}
+
+function summarizeCasePeriod(data: AppData, locale: AppLocale, fallback: string): string {
+  const starts = data.regions.features
+    .map((feature) => feature.properties.period_start)
+    .filter(Boolean)
+    .sort();
+  const ends = data.regions.features
+    .map((feature) => feature.properties.period_end)
+    .filter(Boolean)
+    .sort();
+  return formatPeriod(starts[0], ends[ends.length - 1], locale, fallback);
+}
+
+function labelMapControls(
+  container: HTMLElement,
+  labels: { zoomIn: string; zoomOut: string; resetNorth: string },
+): void {
+  const zoomIn = container.querySelector<HTMLButtonElement>(".maplibregl-ctrl-zoom-in");
+  const zoomOut = container.querySelector<HTMLButtonElement>(".maplibregl-ctrl-zoom-out");
+  const compass = container.querySelector<HTMLButtonElement>(".maplibregl-ctrl-compass");
+  if (zoomIn) {
+    zoomIn.title = labels.zoomIn;
+    zoomIn.setAttribute("aria-label", labels.zoomIn);
+  }
+  if (zoomOut) {
+    zoomOut.title = labels.zoomOut;
+    zoomOut.setAttribute("aria-label", labels.zoomOut);
+  }
+  if (compass) {
+    compass.title = labels.resetNorth;
+    compass.setAttribute("aria-label", labels.resetNorth);
+  }
 }
 
 function toggleLayer(layer: keyof LayerState, setVisibleLayers: Dispatch<SetStateAction<LayerState>>) {
