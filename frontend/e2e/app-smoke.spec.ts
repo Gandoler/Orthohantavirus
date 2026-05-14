@@ -177,7 +177,7 @@ test("opens the English route only when the URL has the en prefix", async ({ pag
 
   await expect(page.locator("html")).toHaveAttribute("lang", "en");
   await expect(page.locator(".map-topbar__brand strong")).toContainText("Verified cases");
-  await expect(page.getByRole("button", { name: "Cases" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Cases", exact: true })).toBeVisible();
 });
 
 test("supports dark mode, layer toggles, and map gestures", async ({ page }) => {
@@ -244,5 +244,5 @@ test("switches locale without dropping the selected map state", async ({ page })
   } else {
     await expect(page.getByLabel("Selected region")).toContainText("Arizona");
   }
-  await expect(page.getByRole("button", { name: "Cases" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Cases", exact: true })).toBeVisible();
 });
